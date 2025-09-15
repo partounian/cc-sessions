@@ -165,16 +165,51 @@ class EnhancedSharedState:
         return {k: v for k, v in self.multi_repo_config['repositories'].items() if v.get('active', True)}
 
     def detect_workspace_repositories(self) -> List[Path]:
-        """Detect repositories in workspace"""
+        """Detect repositories in workspace, excluding cache and system directories"""
         repositories = []
 
-        # Look for git repositories
-        for git_dir in self.workspace_root.rglob('.git'):
-            if git_dir.is_dir():
-                repo_path = git_dir.parent
-                repositories.append(repo_path)
+        # Directories to exclude from repository detection
+        excluded_patterns = [
+            '.cache', 'cache', '__pycache__', 'node_modules', '.npm', '.yarn', '.pnpm',
+            '.local', '.config', 'Library', 'AppData', '.vscode', '.idea', '.vs', 
+            'build', 'dist', '.uv', '.cargo', '.rustup', '.gem', '.pip',
+            'lazy', 'checkpoints', 'globalStorage', 'Application Support'
+        ]
 
-        return repositories
+        # Use a more efficient approach - limit search depth and add early termination
+        max_repos = 20
+        search_depth = 3  # Limit recursion depth
+        
+        def _search_repos(path: Path, depth: int = 0) -> None:
+            if depth > search_depth or len(repositories) >= max_repos:
+                return
+                
+            try:
+                for item in path.iterdir():
+                    if len(repositories) >= max_repos:
+                        break
+                        
+                    if item.is_dir():
+                        if item.name == '.git':
+                            repo_path = item.parent
+                            path_str = str(repo_path).lower()
+                            if not any(pattern.lower() in path_str for pattern in excluded_patterns):
+                                repositories.append(repo_path)
+                        elif not item.name.startswith('.') and item.name not in excluded_patterns:
+                            _search_repos(item, depth + 1)
+            except (PermissionError, OSError):
+                # Skip directories we can't access
+                pass
+
+        _search_repos(self.workspace_root)
+        
+        # Sort by modification time (most recent first)
+        try:
+            repositories.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        except OSError:
+            pass  # If we can't stat files, keep original order
+
+        return repositories[:max_repos]
 
     def setup_workspace_awareness(self) -> Dict[str, Any]:
         """Set up workspace awareness for cc-sessions"""

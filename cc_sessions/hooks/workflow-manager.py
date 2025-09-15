@@ -345,8 +345,25 @@ def main():
         print(f"Error: Invalid JSON input: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"Error: Unexpected error in workflow manager: {e}", file=sys.stderr)
-        sys.exit(1)
+        # Log the error for debugging
+        error_msg = f"Error: Unexpected error in workflow manager: {e}"
+        print(error_msg, file=sys.stderr)
+        
+        # Try to log to shared state if possible
+        try:
+            from hooks.shared_state import SharedState
+            shared_state = SharedState()
+            shared_state.log_error(error_msg)
+        except:
+            pass  # If logging fails, continue gracefully
+        
+        # In case of critical errors, allow tool to proceed rather than blocking completely
+        # This prevents the system from becoming completely unusable
+        if "critical" not in str(e).lower():
+            print("Warning: Allowing tool execution due to hook error", file=sys.stderr)
+            sys.exit(0)  # Allow execution
+        else:
+            sys.exit(1)  # Block execution for critical errors
 
 if __name__ == "__main__":
     main()
