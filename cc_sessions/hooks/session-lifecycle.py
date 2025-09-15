@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 """
-Session Stop Hook for cc-sessions
+Unified Session Lifecycle Hook for cc-sessions
 
-Handles session stop events with comprehensive analytics, cleanup, and state
-persistence. This hook runs when the main Claude Code agent finishes responding.
+Combines session stop analytics and session end cleanup into a single, efficient hook
+that handles all session lifecycle management.
 
-This hook adds unique value by:
-- Collecting comprehensive session analytics and metrics
-- Cleaning up temporary files and agent contexts
-- Updating agent performance metrics
-- Generating session reports and insights
-- Ensuring proper state persistence
+This hook replaces:
+- session-stop.py (session analytics and cleanup)
+- session-end.py (complete session closure and metrics)
+
+Key features:
+- Comprehensive session analytics and metrics collection
+- Session cleanup and state persistence
+- Project metrics updates
+- Agent context cleanup
+- Session archiving
+- Performance analysis and recommendations
 """
 
 import json
@@ -27,16 +32,50 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hooks.shared_state import SharedState
 
 
-class SessionAnalytics:
-    """Collects and analyzes session metrics and performance data"""
+class SessionLifecycleManager:
+    """Manages complete session lifecycle including analytics, cleanup, and archiving"""
 
     def __init__(self):
         self.shared_state = SharedState()
+        self.state_dir = Path('.claude/state')
+        self.temp_dir = Path('.claude/temp')
         self.analytics_dir = Path('.claude/state/analytics')
+        self.project_metrics_file = Path('.claude/state/project_metrics.json')
+
+        # Ensure directories exist
         self.analytics_dir.mkdir(parents=True, exist_ok=True)
         self.session_metrics = {}
 
-    def collect_session_metrics(self) -> Dict[str, Any]:
+    def handle_session_lifecycle(self, is_session_end: bool = False) -> bool:
+        """Handle session lifecycle events (stop or end)"""
+        try:
+            # Collect session metrics
+            self._collect_session_metrics()
+
+            # Generate session report
+            self._generate_session_report()
+
+            # Save metrics and report
+            self._save_session_metrics()
+
+            # Clean up agent contexts
+            self._cleanup_agent_contexts()
+
+            if is_session_end:
+                # Additional end-of-session processing
+                self._persist_final_state()
+                self._update_project_metrics()
+                self._cleanup_temp_files()
+                self._archive_session_data()
+                self._final_cleanup()
+
+            return True
+
+        except Exception as e:
+            self._log_error(f"Error handling session lifecycle: {e}")
+            return False
+
+    def _collect_session_metrics(self) -> Dict[str, Any]:
         """Collect comprehensive session metrics"""
         try:
             metrics = {
@@ -320,7 +359,7 @@ class SessionAnalytics:
             self._log_error(f"Error collecting performance metrics: {e}")
             return {}
 
-    def generate_session_report(self) -> Dict[str, Any]:
+    def _generate_session_report(self) -> Dict[str, Any]:
         """Generate comprehensive session report"""
         try:
             report = {
@@ -549,7 +588,7 @@ class SessionAnalytics:
             self._log_error(f"Error analyzing resource usage: {e}")
             return {}
 
-    def save_session_metrics(self) -> None:
+    def _save_session_metrics(self) -> None:
         """Save session metrics to persistent storage"""
         try:
             # Save detailed metrics
@@ -558,7 +597,7 @@ class SessionAnalytics:
                 json.dump(self.session_metrics, f, indent=2)
 
             # Save session report
-            report = self.generate_session_report()
+            report = self._generate_session_report()
             report_file = self.analytics_dir / f'session_report_{self._get_timestamp()}.json'
             with open(report_file, 'w') as f:
                 json.dump(report, f, indent=2)
@@ -613,7 +652,7 @@ class SessionAnalytics:
         except Exception as e:
             self._log_error(f"Error updating aggregate metrics: {e}")
 
-    def cleanup_agent_contexts(self) -> None:
+    def _cleanup_agent_contexts(self) -> None:
         """Clean up temporary agent context files"""
         try:
             agent_context_dir = Path('.claude/state/agent_context')
@@ -634,6 +673,171 @@ class SessionAnalytics:
 
         except Exception as e:
             self._log_error(f"Error cleaning up agent contexts: {e}")
+
+    def _persist_final_state(self) -> None:
+        """Persist final state to ensure no data loss"""
+        try:
+            # Get current state
+            current_task = self.shared_state.get_current_task()
+            daic_mode = self.shared_state.get_daic_mode()
+            enforcement_state = self.shared_state.get_enforcement_state()
+
+            # Create final state snapshot
+            final_state = {
+                'session_end_time': self._get_timestamp(),
+                'current_task': current_task,
+                'daic_mode': daic_mode,
+                'enforcement_state': enforcement_state,
+                'session_completed': True,
+                'final_cleanup_performed': True
+            }
+
+            # Save final state
+            final_state_file = self.state_dir / 'final_state.json'
+            with open(final_state_file, 'w') as f:
+                json.dump(final_state, f, indent=2)
+
+            # Update current task with completion status
+            if current_task:
+                current_task['session_completed'] = True
+                current_task['completion_time'] = self._get_timestamp()
+                self.shared_state.update_current_task(current_task)
+
+            self._log_info("Final state persisted successfully")
+
+        except Exception as e:
+            self._log_error(f"Error persisting final state: {e}")
+
+    def _update_project_metrics(self) -> None:
+        """Update project-level metrics"""
+        try:
+            # Load existing project metrics
+            if self.project_metrics_file.exists():
+                with open(self.project_metrics_file, 'r') as f:
+                    project_metrics = json.load(f)
+            else:
+                project_metrics = {
+                    'total_sessions': 0,
+                    'total_tools_used': 0,
+                    'average_session_duration': 0,
+                    'average_success_rate': 0,
+                    'average_context_efficiency': 0,
+                    'last_updated': None
+                }
+
+            # Load current session metrics
+            tool_usage = self.session_metrics.get('tool_usage', {})
+            context_usage = self.session_metrics.get('context_usage', {})
+            session_info = self.session_metrics.get('session_info', {})
+
+            # Update project metrics
+            project_metrics['total_sessions'] += 1
+            project_metrics['total_tools_used'] += tool_usage.get('total_tools_used', 0)
+            project_metrics['last_updated'] = self._get_timestamp()
+
+            # Update averages
+            current_duration = session_info.get('duration_seconds', 0) / 60  # Convert to minutes
+            current_success_rate = self._calculate_success_rate()
+            current_context_efficiency = context_usage.get('context_efficiency', 0)
+
+            total_sessions = project_metrics['total_sessions']
+            project_metrics['average_session_duration'] = (
+                (project_metrics['average_session_duration'] * (total_sessions - 1) + current_duration) / total_sessions
+            )
+            project_metrics['average_success_rate'] = (
+                (project_metrics['average_success_rate'] * (total_sessions - 1) + current_success_rate) / total_sessions
+            )
+            project_metrics['average_context_efficiency'] = (
+                (project_metrics['average_context_efficiency'] * (total_sessions - 1) + current_context_efficiency) / total_sessions
+            )
+
+            # Save updated project metrics
+            with open(self.project_metrics_file, 'w') as f:
+                json.dump(project_metrics, f, indent=2)
+
+            self._log_info("Project metrics updated successfully")
+
+        except Exception as e:
+            self._log_error(f"Error updating project metrics: {e}")
+
+    def _cleanup_temp_files(self) -> None:
+        """Clean up temporary files"""
+        try:
+            # Clean up temp directory
+            if self.temp_dir.exists():
+                shutil.rmtree(self.temp_dir)
+                self.temp_dir.mkdir(parents=True, exist_ok=True)
+
+            # Clean up old analytics files (keep only last 30 days)
+            cutoff_date = datetime.now() - timedelta(days=30)
+            for file_path in self.analytics_dir.glob('*'):
+                if file_path.is_file():
+                    file_time = datetime.fromtimestamp(file_path.stat().st_mtime)
+                    if file_time < cutoff_date:
+                        file_path.unlink()
+
+            self._log_info("Temporary files cleaned up")
+
+        except Exception as e:
+            self._log_error(f"Error cleaning up temp files: {e}")
+
+    def _archive_session_data(self) -> None:
+        """Archive session data for long-term storage"""
+        try:
+            # Create archive directory
+            archive_dir = Path('.claude/archive')
+            archive_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create session archive
+            session_id = self._generate_session_id()
+            session_archive_dir = archive_dir / f'session_{session_id}'
+            session_archive_dir.mkdir(exist_ok=True)
+
+            # Archive important files
+            important_files = [
+                'current_task.json',
+                'daic-mode.json',
+                'final_state.json'
+            ]
+
+            for file_name in important_files:
+                source_file = self.state_dir / file_name
+                if source_file.exists():
+                    shutil.copy2(source_file, session_archive_dir / file_name)
+
+            # Archive analytics
+            analytics_archive_dir = session_archive_dir / 'analytics'
+            analytics_archive_dir.mkdir(exist_ok=True)
+
+            for analytics_file in self.analytics_dir.glob('*'):
+                if analytics_file.is_file():
+                    shutil.copy2(analytics_file, analytics_archive_dir / analytics_file.name)
+
+            self._log_info(f"Session data archived to {session_archive_dir}")
+
+        except Exception as e:
+            self._log_error(f"Error archiving session data: {e}")
+
+    def _final_cleanup(self) -> None:
+        """Perform final cleanup tasks"""
+        try:
+            # Update final state
+            final_state = {
+                'session_ended': True,
+                'cleanup_completed': True,
+                'end_time': self._get_timestamp(),
+                'next_session_ready': True
+            }
+
+            final_state_file = self.state_dir / 'session_end_state.json'
+            with open(final_state_file, 'w') as f:
+                json.dump(final_state, f, indent=2)
+
+            # Log final cleanup
+            self._log_info("Final cleanup completed - session ready for next use")
+
+        except Exception as e:
+            self._log_error(f"Error in final cleanup: {e}")
 
     def _generate_session_id(self) -> str:
         """Generate unique session ID"""
@@ -675,8 +879,9 @@ class SessionAnalytics:
         """Log error message"""
         print(f"ERROR: {message}", file=sys.stderr)
 
+
 def main():
-    """Main entry point for Session Stop hook"""
+    """Main entry point for Session Lifecycle hook"""
     try:
         # Read input from stdin (if any)
         try:
@@ -684,40 +889,43 @@ def main():
         except:
             input_data = {}
 
-        # Initialize session analytics
-        analytics = SessionAnalytics()
+        # Determine if this is session end or session stop based on hook event
+        hook_event_name = input_data.get('hookEventName', '')
+        is_session_end = (hook_event_name == 'SessionEnd' or input_data.get('session_end', False))
 
-        # Collect session metrics
-        metrics = analytics.collect_session_metrics()
+        # Initialize session lifecycle manager
+        lifecycle_manager = SessionLifecycleManager()
 
-        # Generate session report
-        report = analytics.generate_session_report()
+        # Handle session lifecycle
+        success = lifecycle_manager.handle_session_lifecycle(is_session_end)
 
-        # Save metrics and report
-        analytics.save_session_metrics()
-
-        # Clean up agent contexts
-        analytics.cleanup_agent_contexts()
-
-        # Return summary
-        result = {
-            'status': 'success',
-            'message': 'Session stop processing completed',
-            'session_summary': report.get('session_summary', {}),
-            'timestamp': analytics._get_timestamp()
-        }
-
-        print(json.dumps(result))
-        sys.exit(0)
+        if success:
+            result = {
+                'status': 'success',
+                'message': 'Session lifecycle processing completed successfully',
+                'session_type': 'end' if is_session_end else 'stop',
+                'timestamp': lifecycle_manager._get_timestamp()
+            }
+            print(json.dumps(result))
+            sys.exit(0)
+        else:
+            result = {
+                'status': 'error',
+                'message': 'Session lifecycle processing failed',
+                'timestamp': lifecycle_manager._get_timestamp()
+            }
+            print(json.dumps(result), file=sys.stderr)
+            sys.exit(1)
 
     except Exception as e:
         result = {
             'status': 'error',
             'message': f'Unexpected error: {e}',
-            'timestamp': analytics._get_timestamp() if 'analytics' in locals() else 'unknown'
+            'timestamp': lifecycle_manager._get_timestamp() if 'lifecycle_manager' in locals() else 'unknown'
         }
         print(json.dumps(result), file=sys.stderr)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

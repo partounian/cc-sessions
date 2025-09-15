@@ -2,33 +2,33 @@
 
 /**
  * Claude Code Sessions Framework - Cross-Platform Node.js Installer
- * 
+ *
  * NPM wrapper installer providing identical functionality to the Python installer
  * with native Windows, macOS, and Linux support. Features interactive terminal
  * UI, platform-aware command detection, and cross-platform file operations.
- * 
+ *
  * Key Features:
  *   - Windows compatibility with .cmd and .ps1 script installation
  *   - Cross-platform command detection (where/which)
  *   - Platform-aware path handling and file permissions
  *   - Interactive menu system with keyboard navigation
  *   - Global daic command installation with PATH integration
- * 
+ *
  * Platform Support:
  *   - Windows 10/11 (Command Prompt, PowerShell, Git Bash)
  *   - macOS (Terminal, iTerm2 with Bash/Zsh)
  *   - Linux distributions (various terminals and shells)
- * 
+ *
  * Installation Methods:
  *   - npm install -g cc-sessions (global installation)
  *   - npx cc-sessions (temporary installation)
- * 
+ *
  * Windows Integration:
  *   - Creates %USERPROFILE%\AppData\Local\cc-sessions\bin directory
  *   - Installs both daic.cmd and daic.ps1 for shell compatibility
  *   - Uses Windows-style environment variables (%VAR%)
  *   - Platform-specific hook command generation
- * 
+ *
  * @module install
  * @requires fs
  * @requires path
@@ -135,21 +135,21 @@ function commandExists(command) {
 // Check dependencies
 async function checkDependencies() {
   console.log(color('Checking dependencies...', colors.cyan));
-  
+
   // Check Python
   const hasPython = commandExists('python3') || commandExists('python');
   if (!hasPython) {
     console.log(color('❌ Python 3 is required but not installed.', colors.red));
     process.exit(1);
   }
-  
+
   // Check pip
   const hasPip = commandExists('pip3') || commandExists('pip');
   if (!hasPip) {
     console.log(color('❌ pip is required but not installed.', colors.red));
     process.exit(1);
   }
-  
+
   // Check Git (warning only)
   if (!commandExists('git')) {
     console.log(color('⚠️  Warning: Not in a git repository. Sessions works best with git.', colors.yellow));
@@ -163,7 +163,7 @@ async function checkDependencies() {
 // Create directory structure
 async function createDirectories() {
   console.log(color('Creating directory structure...', colors.cyan));
-  
+
   const dirs = [
     '.claude/hooks',
     '.claude/state',
@@ -173,7 +173,7 @@ async function createDirectories() {
     'sessions/protocols',
     'sessions/knowledge'
   ];
-  
+
   for (const dir of dirs) {
     await fs.mkdir(path.join(PROJECT_ROOT, dir), { recursive: true });
   }
@@ -205,7 +205,7 @@ async function copyFiles() {
       }
     }
   }
-  
+
   console.log(color('Installing protocols...', colors.cyan));
   const protocolFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/protocols'));
   for (const file of protocolFiles) {
@@ -216,7 +216,7 @@ async function copyFiles() {
       );
     }
   }
-  
+
   console.log(color('Installing agent definitions...', colors.cyan));
   const agentFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/agents'));
   for (const file of agentFiles) {
@@ -227,13 +227,13 @@ async function copyFiles() {
       );
     }
   }
-  
+
   console.log(color('Installing templates...', colors.cyan));
   await fs.copyFile(
     path.join(SCRIPT_DIR, 'cc_sessions/templates/TEMPLATE.md'),
     path.join(PROJECT_ROOT, 'sessions/tasks/TEMPLATE.md')
   );
-  
+
   console.log(color('Installing commands...', colors.cyan));
   const commandFiles = await fs.readdir(path.join(SCRIPT_DIR, 'cc_sessions/commands'));
   for (const file of commandFiles) {
@@ -244,7 +244,7 @@ async function copyFiles() {
       );
     }
   }
-  
+
   // Copy knowledge files if they exist
   const knowledgePath = path.join(SCRIPT_DIR, 'cc_sessions/knowledge/claude-code');
   try {
@@ -260,11 +260,11 @@ async function copyFiles() {
 async function copyDir(src, dest) {
   await fs.mkdir(dest, { recursive: true });
   const entries = await fs.readdir(src, { withFileTypes: true });
-  
+
   for (const entry of entries) {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
-    
+
     if (entry.isDirectory()) {
       await copyDir(srcPath, destPath);
     } else {
@@ -276,16 +276,16 @@ async function copyDir(src, dest) {
 // Install daic command
 async function installDaicCommand() {
   console.log(color('Installing daic command...', colors.cyan));
-  
+
   if (process.platform === 'win32') {
     // Windows installation
     const daicCmdSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.cmd');
     const daicPs1Source = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic.ps1');
-    
+
     // Install to user's local directory
     const localBin = path.join(process.env.USERPROFILE || process.env.HOME, 'AppData', 'Local', 'cc-sessions', 'bin');
     await fs.mkdir(localBin, { recursive: true });
-    
+
     try {
       // Copy .cmd script
       await fs.access(daicCmdSource);
@@ -295,7 +295,7 @@ async function installDaicCommand() {
     } catch {
       console.log(color('  ⚠️ daic.cmd script not found', colors.yellow));
     }
-    
+
     try {
       // Copy .ps1 script
       await fs.access(daicPs1Source);
@@ -305,13 +305,13 @@ async function installDaicCommand() {
     } catch {
       console.log(color('  ⚠️ daic.ps1 script not found', colors.yellow));
     }
-    
+
     console.log(color(`  ℹ Add ${localBin} to your PATH to use 'daic' command`, colors.yellow));
   } else {
     // Unix/Mac installation
     const daicSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/daic');
     const daicDest = '/usr/local/bin/daic';
-    
+
     try {
       await fs.copyFile(daicSource, daicDest);
       await fs.chmod(daicDest, 0o755);
@@ -337,47 +337,47 @@ async function interactiveMenu(items, options = {}) {
     selectedItems = new Set(),
     formatItem = (item, selected) => item
   } = options;
-  
+
   let currentIndex = 0;
   let selected = new Set(selectedItems);
   let done = false;
-  
+
   // Hide cursor
   process.stdout.write('\x1B[?25l');
-  
+
   const renderMenu = () => {
     // Clear previous menu
     console.clear();
-    
+
     // Render title
     if (title) {
       console.log(title);
     }
-    
+
     // Render items
     items.forEach((item, index) => {
       const isSelected = selected.has(item);
       const isCurrent = index === currentIndex;
-      
+
       let prefix = '  ';
       if (isCurrent) {
         prefix = color('▶ ', colors.cyan);
       }
-      
+
       console.log(prefix + formatItem(item, isSelected, isCurrent));
     });
   };
-  
+
   return new Promise((resolve) => {
     renderMenu();
-    
+
     // Set raw mode for key input
     readline.emitKeypressEvents(process.stdin);
     if (process.stdin.setRawMode) {
       process.stdin.setRawMode(true);
     }
     process.stdin.resume();
-    
+
     const keyHandler = (str, key) => {
       if (key) {
         if (key.name === 'up') {
@@ -403,10 +403,10 @@ async function interactiveMenu(items, options = {}) {
           process.stdin.removeListener('keypress', keyHandler);
           process.stdout.write('\x1B[?25h'); // Show cursor
           console.clear();
-          
+
           // Resume stdin for subsequent prompts (don't pause!)
           process.stdin.resume();
-          
+
           if (multiSelect) {
             resolve(selected);
           } else {
@@ -423,7 +423,7 @@ async function interactiveMenu(items, options = {}) {
         }
       }
     };
-    
+
     process.stdin.on('keypress', keyHandler);
   });
 }
@@ -444,12 +444,12 @@ async function configureToolBlocking() {
     { name: 'WebFetch', description: 'Fetch web content', defaultBlocked: false },
     { name: 'Task', description: 'Launch specialized agents', defaultBlocked: false }
   ];
-  
+
   // Initialize blocked tools
-  const initialBlocked = new Set(config.blocked_tools.map(name => 
+  const initialBlocked = new Set(config.blocked_tools.map(name =>
     allTools.find(t => t.name === name)
   ).filter(Boolean));
-  
+
   const title = `${color('╭───────────────────────────────────────────────────────────────╮', colors.cyan)}
 ${color('│              Tool Blocking Configuration                      │', colors.cyan)}
 ${color('├───────────────────────────────────────────────────────────────┤', colors.cyan)}
@@ -457,22 +457,22 @@ ${color('│   ↑/↓: Navigate   SPACE: Toggle   ENTER: Save & Continue      �
 ${color('│     Tools marked with 🔒 are blocked in discussion mode       │', colors.dim)}
 ${color('╰───────────────────────────────────────────────────────────────╯', colors.cyan)}
 `;
-  
+
   const formatItem = (tool, isBlocked, isCurrent) => {
     const icon = isBlocked ? icons.lock : icons.unlock;
     const status = isBlocked ? color('[BLOCKED]', colors.red) : color('[ALLOWED]', colors.green);
     const toolColor = isCurrent ? colors.bright : (isBlocked ? colors.yellow : colors.white);
-    
+
     return `${icon} ${color(tool.name.padEnd(15), toolColor)} - ${tool.description.padEnd(30)} ${status}`;
   };
-  
+
   const selectedTools = await interactiveMenu(allTools, {
     title,
     multiSelect: true,
     selectedItems: initialBlocked,
     formatItem
   });
-  
+
   config.blocked_tools = Array.from(selectedTools).map(t => t.name);
   console.log(color(`\n  ${icons.check} Tool blocking configuration saved`, colors.green));
 }
@@ -484,21 +484,21 @@ async function configure() {
   console.log(color('║                    CONFIGURATION SETUP                        ║', colors.bright + colors.cyan));
   console.log(color('╚═══════════════════════════════════════════════════════════════╝', colors.bright + colors.cyan));
   console.log();
-  
+
   let statuslineInstalled = false;
-  
+
   // Developer name section
   console.log(color(`\n${icons.star} DEVELOPER IDENTITY`, colors.bright + colors.magenta));
   console.log(color('─'.repeat(60), colors.dim));
   console.log(color('  Claude will use this name when addressing you in sessions', colors.dim));
   console.log();
-  
+
   const name = await question(color('  Your name: ', colors.cyan));
   if (name) {
     config.developer_name = name;
     console.log(color(`  ${icons.check} Hello, ${name}!`, colors.green));
   }
-  
+
   // Statusline installation section
   console.log(color(`\n\n${icons.star} STATUSLINE INSTALLATION`, colors.bright + colors.magenta));
   console.log(color('─'.repeat(60), colors.dim));
@@ -508,9 +508,9 @@ async function configure() {
   console.log(color(`    ${icons.bullet} Modified file counts`, colors.cyan));
   console.log(color(`    ${icons.bullet} Open task count`, colors.cyan));
   console.log();
-  
+
   const installStatusline = await question(color('  Install statusline? (y/n): ', colors.cyan));
-  
+
   if (installStatusline.toLowerCase() === 'y') {
     const statuslineSource = path.join(SCRIPT_DIR, 'cc_sessions/scripts/statusline-script.sh');
     try {
@@ -524,7 +524,7 @@ async function configure() {
       console.log(color(`  ${icons.warning} Statusline script not found in package`, colors.yellow));
     }
   }
-  
+
   // DAIC trigger phrases section
   console.log(color(`\n\n${icons.star} DAIC WORKFLOW CONFIGURATION`, colors.bright + colors.magenta));
   console.log(color('─'.repeat(60), colors.dim));
@@ -538,7 +538,7 @@ async function configure() {
   console.log();
   console.log(color('  Hint: Common additions: "implement it", "do it", "proceed"', colors.dim));
   console.log();
-  
+
   // Allow adding multiple custom trigger phrases
   let addingTriggers = true;
   while (addingTriggers) {
@@ -550,7 +550,7 @@ async function configure() {
       addingTriggers = false;
     }
   }
-  
+
   // API Mode configuration
   console.log(color(`\n\n${icons.star} THINKING BUDGET CONFIGURATION`, colors.bright + colors.magenta));
   console.log(color('─'.repeat(60), colors.dim));
@@ -567,7 +567,7 @@ async function configure() {
   console.log();
   console.log(color('  You can toggle this anytime with: /api-mode', colors.dim));
   console.log();
-  
+
   const enableUltrathink = await question(color('  Enable automatic ultrathink for best performance? (y/n): ', colors.cyan));
   if (enableUltrathink.toLowerCase() === 'y' || enableUltrathink.toLowerCase() === 'yes') {
     config.api_mode = false;
@@ -576,18 +576,18 @@ async function configure() {
     config.api_mode = true;
     console.log(color(`  ${icons.check} API mode - manual ultrathink control (use [[ ultrathink ]])`, colors.green));
   }
-  
+
   // Advanced configuration
   console.log(color(`\n\n${icons.star} ADVANCED OPTIONS`, colors.bright + colors.magenta));
   console.log(color('─'.repeat(60), colors.dim));
   console.log(color('  Configure tool blocking, task prefixes, and more', colors.white));
   console.log();
-  
+
   const advanced = await question(color('  Configure advanced options? (y/n): ', colors.cyan));
-  
+
   if (advanced.toLowerCase() === 'y') {
     await configureToolBlocking();
-    
+
     // Task prefix configuration
     console.log(color(`\n\n${icons.star} TASK PREFIX CONFIGURATION`, colors.bright + colors.magenta));
     console.log(color('─'.repeat(60), colors.dim));
@@ -599,38 +599,38 @@ async function configure() {
     console.log(color(`    ${icons.arrow} l- (low priority)`, colors.white));
     console.log(color(`    ${icons.arrow} ?- (investigate/research)`, colors.white));
     console.log();
-    
+
     const customizePrefixes = await question(color('  Customize task prefixes? (y/n): ', colors.cyan));
     if (customizePrefixes.toLowerCase() === 'y') {
       const high = await question(color('  High priority prefix [h-]: ', colors.cyan)) || 'h-';
       const med = await question(color('  Medium priority prefix [m-]: ', colors.cyan)) || 'm-';
       const low = await question(color('  Low priority prefix [l-]: ', colors.cyan)) || 'l-';
       const inv = await question(color('  Investigate prefix [?-]: ', colors.cyan)) || '?-';
-      
+
       config.task_prefixes = {
         priority: [high, med, low, inv]
       };
-      
+
       console.log(color(`  ${icons.check} Task prefixes updated`, colors.green));
     }
   }
-  
+
   return { statuslineInstalled };
 }
 
 // Save configuration
 async function saveConfig(installStatusline = false) {
   console.log(color('Creating configuration...', colors.cyan));
-  
+
   await fs.writeFile(
     path.join(PROJECT_ROOT, 'sessions/sessions-config.json'),
     JSON.stringify(config, null, 2)
   );
-  
+
   // Create or update .claude/settings.json with hooks configuration
   const settingsPath = path.join(PROJECT_ROOT, '.claude/settings.json');
   let settings = {};
-  
+
   // Check if settings.json already exists
   try {
     const existingSettings = await fs.readFile(settingsPath, 'utf-8');
@@ -639,8 +639,8 @@ async function saveConfig(installStatusline = false) {
   } catch {
     console.log(color('Creating new settings.json with sessions hooks...', colors.cyan));
   }
-  
-  // Define the sessions hooks
+
+  // Define the consolidated sessions hooks
   const sessionsHooks = {
     UserPromptSubmit: [
       {
@@ -654,11 +654,11 @@ async function saveConfig(installStatusline = false) {
     ],
     PreToolUse: [
       {
-        matcher: "Write|Edit|MultiEdit|Task|Bash",
+        matcher: "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
           }
         ]
       },
@@ -674,10 +674,11 @@ async function saveConfig(installStatusline = false) {
     ],
     PostToolUse: [
       {
+        matcher: "Write|Edit|MultiEdit|NotebookEdit",
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\post-tool-use.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
           }
         ]
       }
@@ -688,18 +689,48 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-start.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\enhanced_session_start.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/enhanced_session_start.py"
+          }
+        ]
+      }
+    ],
+    Stop: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-lifecycle.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/session-lifecycle.py"
+          }
+        ]
+      }
+    ],
+    PreCompact: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+          }
+        ]
+      }
+    ],
+    Notification: [
+      {
+        hooks: [
+          {
+            type: "command",
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
           }
         ]
       }
     ]
   };
-  
+
   // Merge hooks (sessions hooks take precedence)
   if (!settings.hooks) {
     settings.hooks = {};
   }
-  
+
   // Merge each hook type
   for (const [hookType, hookConfig] of Object.entries(sessionsHooks)) {
     if (!settings.hooks[hookType]) {
@@ -709,7 +740,7 @@ async function saveConfig(installStatusline = false) {
       settings.hooks[hookType] = [...settings.hooks[hookType], ...hookConfig];
     }
   }
-  
+
   // Add statusline if requested
   if (installStatusline) {
     settings.statusLine = {
@@ -718,17 +749,17 @@ async function saveConfig(installStatusline = false) {
       padding: 0
     };
   }
-  
+
   // Save the updated settings
   await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
   console.log(color('✅ Sessions hooks configured in settings.json', colors.green));
-  
+
   // Initialize DAIC state
   await fs.writeFile(
     path.join(PROJECT_ROOT, '.claude/state/daic-mode.json'),
     JSON.stringify({ mode: "discussion" }, null, 2)
   );
-  
+
   // Create initial task state
   const currentDate = new Date().toISOString().split('T')[0];
   await fs.writeFile(
@@ -749,28 +780,28 @@ async function setupClaudeMd() {
   console.log(color('         CLAUDE.md Integration', colors.bright));
   console.log(color('═══════════════════════════════════════════', colors.bright));
   console.log();
-  
+
   // Check for existing CLAUDE.md
   try {
     await fs.access(path.join(PROJECT_ROOT, 'CLAUDE.md'));
-    
+
     // File exists, preserve it and add sessions as separate file
     console.log(color('CLAUDE.md already exists, preserving your project-specific rules...', colors.cyan));
-    
+
     // Copy CLAUDE.sessions.md as separate file
     await fs.copyFile(
       path.join(SCRIPT_DIR, 'cc_sessions/templates/CLAUDE.sessions.md'),
       path.join(PROJECT_ROOT, 'CLAUDE.sessions.md')
     );
-    
+
     // Check if it already includes sessions
     const content = await fs.readFile(path.join(PROJECT_ROOT, 'CLAUDE.md'), 'utf-8');
     if (!content.includes('@CLAUDE.sessions.md')) {
       console.log(color('Adding sessions include to existing CLAUDE.md...', colors.cyan));
-      
+
       const addition = '\n## Sessions System Behaviors\n\n@CLAUDE.sessions.md\n';
       await fs.appendFile(path.join(PROJECT_ROOT, 'CLAUDE.md'), addition);
-      
+
       console.log(color('✅ Added @CLAUDE.sessions.md include to your CLAUDE.md', colors.green));
     } else {
       console.log(color('✅ CLAUDE.md already includes sessions behaviors', colors.green));
@@ -792,10 +823,10 @@ async function install() {
   console.log(color('║            cc-sessions Installer           ║', colors.bright));
   console.log(color('╚════════════════════════════════════════════╝', colors.bright));
   console.log();
-  
+
   // Detect correct project directory
   await detectProjectDirectory();
-  
+
   // Check CLAUDE_PROJECT_DIR
   if (!process.env.CLAUDE_PROJECT_DIR) {
     console.log(color(`⚠️  CLAUDE_PROJECT_DIR not set. Setting it to ${PROJECT_ROOT}`, colors.yellow));
@@ -803,7 +834,7 @@ async function install() {
     console.log(`   export CLAUDE_PROJECT_DIR="${PROJECT_ROOT}"`);
     console.log();
   }
-  
+
   try {
     await checkDependencies();
     await createDirectories();
@@ -813,7 +844,7 @@ async function install() {
     const { statuslineInstalled } = await configure();
     await saveConfig(statuslineInstalled);
     await setupClaudeMd();
-    
+
     // Success message
     console.log();
     console.log();
@@ -821,7 +852,7 @@ async function install() {
     console.log(color('║                 🎉 INSTALLATION COMPLETE! 🎉                  ║', colors.bright + colors.green));
     console.log(color('╚═══════════════════════════════════════════════════════════════╝', colors.bright + colors.green));
     console.log();
-    
+
     console.log(color('  Installation Summary:', colors.bright + colors.cyan));
     console.log(color('  ─────────────────────', colors.dim));
     console.log(color(`  ${icons.check} Directory structure created`, colors.green));
@@ -830,13 +861,13 @@ async function install() {
     console.log(color(`  ${icons.check} daic command available globally`, colors.green));
     console.log(color(`  ${icons.check} Configuration saved`, colors.green));
     console.log(color(`  ${icons.check} DAIC state initialized (Discussion mode)`, colors.green));
-    
+
     if (statuslineInstalled) {
       console.log(color(`  ${icons.check} Statusline configured`, colors.green));
     }
-    
+
     console.log();
-    
+
     // Test daic command
     if (commandExists('daic')) {
       console.log(color(`  ${icons.check} daic command verified and working`, colors.green));
@@ -844,7 +875,7 @@ async function install() {
       console.log(color(`  ${icons.warning} daic command not in PATH`, colors.yellow));
       console.log(color('       Add /usr/local/bin to your PATH', colors.dim));
     }
-    
+
     console.log();
     console.log(color(`  ${icons.star} NEXT STEPS`, colors.bright + colors.magenta));
     console.log(color('  ─────────────', colors.dim));
@@ -864,7 +895,7 @@ async function install() {
     console.log(color('  ──────────────────────────────────────────────────────', colors.dim));
     console.log();
     console.log(color(`  Welcome aboard, ${config.developer_name}! 🚀`, colors.bright + colors.cyan));
-    
+
   } catch (error) {
     console.error(color(`❌ Installation failed: ${error.message}`, colors.red));
     process.exit(1);

@@ -12,7 +12,7 @@ Key Features:
     - Platform-aware file permission management
     - Interactive configuration with terminal UI
     - Global daic command installation with PATH integration
-    
+
 Platform Support:
     - Windows 10/11 (Command Prompt, PowerShell, Git Bash)
     - macOS (Bash, Zsh)
@@ -89,11 +89,11 @@ class SessionsInstaller:
             "task_detection": {"enabled": True},
             "branch_enforcement": {"enabled": True}
         }
-    
+
     def detect_project_directory(self) -> Path:
         """Detect the correct project directory when running from pip/pipx"""
         current_dir = Path.cwd()
-        
+
         # If running from site-packages or pipx environment
         if 'site-packages' in str(current_dir) or '.local/pipx' in str(current_dir):
             print(color("⚠️  Running from package directory, not project directory.", Colors.YELLOW))
@@ -104,37 +104,37 @@ class SessionsInstaller:
             else:
                 # Default to user's current working directory before pip ran
                 return Path.cwd()
-        
+
         return current_dir
-    
+
     def check_dependencies(self) -> None:
         """Check for required dependencies"""
         print(color("Checking dependencies...", Colors.CYAN))
-        
+
         # Check Python version
         if sys.version_info < (3, 8):
             print(color("❌ Python 3.8+ is required.", Colors.RED))
             sys.exit(1)
-        
+
         # Check pip
         if not command_exists("pip3") and not command_exists("pip"):
             print(color("❌ pip is required but not installed.", Colors.RED))
             sys.exit(1)
-        
+
         # Check Git (warning only)
         if not command_exists("git"):
             print(color("⚠️  Warning: Git not found. Sessions works best with git.", Colors.YELLOW))
             response = input("Continue anyway? (y/n): ")
             if response.lower() != 'y':
                 sys.exit(1)
-    
+
     def create_directories(self) -> None:
         """Create necessary directory structure"""
         print(color("Creating directory structure...", Colors.CYAN))
-        
+
         dirs = [
             ".claude/hooks",
-            ".claude/state", 
+            ".claude/state",
             ".claude/agents",
             ".claude/commands",
             "sessions/tasks",
@@ -142,20 +142,20 @@ class SessionsInstaller:
             "sessions/protocols",
             "sessions/knowledge"
         ]
-        
+
         for dir_path in dirs:
             (self.project_root / dir_path).mkdir(parents=True, exist_ok=True)
-    
+
     def install_python_deps(self) -> None:
         """Install Python dependencies"""
         print(color("Installing Python dependencies...", Colors.CYAN))
         try:
             pip_cmd = "pip3" if command_exists("pip3") else "pip"
-            subprocess.run([pip_cmd, "install", "tiktoken", "--quiet"], 
+            subprocess.run([pip_cmd, "install", "tiktoken", "--quiet"],
                          capture_output=True, check=True)
         except subprocess.CalledProcessError:
             print(color("⚠️  Could not install tiktoken. You may need to install it manually.", Colors.YELLOW))
-    
+
     def copy_files(self) -> None:
         """Copy all necessary files to the project"""
         # Copy hooks
@@ -167,7 +167,7 @@ class SessionsInstaller:
                 shutil.copy2(hook_file, dest)
                 if os.name != 'nt':
                     dest.chmod(0o755)
-        
+
         # Copy protocols
         print(color("Installing protocols...", Colors.CYAN))
         protocols_dir = self.package_dir / "protocols"
@@ -175,7 +175,7 @@ class SessionsInstaller:
             for protocol_file in protocols_dir.glob("*.md"):
                 dest = self.project_root / "sessions/protocols" / protocol_file.name
                 shutil.copy2(protocol_file, dest)
-        
+
         # Copy agents
         print(color("Installing agent definitions...", Colors.CYAN))
         agents_dir = self.package_dir / "agents"
@@ -183,14 +183,14 @@ class SessionsInstaller:
             for agent_file in agents_dir.glob("*.md"):
                 dest = self.project_root / ".claude/agents" / agent_file.name
                 shutil.copy2(agent_file, dest)
-        
+
         # Copy templates
         print(color("Installing templates...", Colors.CYAN))
         template_file = self.package_dir / "templates/TEMPLATE.md"
         if template_file.exists():
             dest = self.project_root / "sessions/tasks/TEMPLATE.md"
             shutil.copy2(template_file, dest)
-        
+
         # Copy commands
         print(color("Installing commands...", Colors.CYAN))
         commands_dir = self.package_dir / "commands"
@@ -198,7 +198,7 @@ class SessionsInstaller:
             for command_file in commands_dir.glob("*.md"):
                 dest = self.project_root / ".claude/commands" / command_file.name
                 shutil.copy2(command_file, dest)
-        
+
         # Copy knowledge files
         knowledge_dir = self.package_dir / "knowledge/claude-code"
         if knowledge_dir.exists():
@@ -207,30 +207,30 @@ class SessionsInstaller:
             if dest_dir.exists():
                 shutil.rmtree(dest_dir)
             shutil.copytree(knowledge_dir, dest_dir)
-    
+
     def install_daic_command(self) -> None:
         """Install the daic command globally"""
         print(color("Installing daic command...", Colors.CYAN))
-        
+
         if os.name == 'nt':  # Windows
             # Install Windows scripts (.cmd and .ps1)
             daic_cmd_source = self.package_dir / "scripts/daic.cmd"
             daic_ps1_source = self.package_dir / "scripts/daic.ps1"
-            
+
             # Try to install to user's local directory
             local_bin = Path.home() / "AppData" / "Local" / "cc-sessions" / "bin"
             local_bin.mkdir(parents=True, exist_ok=True)
-            
+
             if daic_cmd_source.exists():
                 daic_cmd_dest = local_bin / "daic.cmd"
                 shutil.copy2(daic_cmd_source, daic_cmd_dest)
                 print(color(f"  ✓ Installed daic.cmd to {local_bin}", Colors.GREEN))
-            
+
             if daic_ps1_source.exists():
                 daic_ps1_dest = local_bin / "daic.ps1"
                 shutil.copy2(daic_ps1_source, daic_ps1_dest)
                 print(color(f"  ✓ Installed daic.ps1 to {local_bin}", Colors.GREEN))
-            
+
             print(color(f"  ℹ Add {local_bin} to your PATH to use 'daic' command", Colors.YELLOW))
         else:
             # Unix/Mac installation
@@ -238,9 +238,9 @@ class SessionsInstaller:
             if not daic_source.exists():
                 print(color("⚠️  daic script not found in package.", Colors.YELLOW))
                 return
-            
+
             daic_dest = Path("/usr/local/bin/daic")
-            
+
             try:
                 shutil.copy2(daic_source, daic_dest)
                 daic_dest.chmod(0o755)
@@ -251,7 +251,7 @@ class SessionsInstaller:
                     subprocess.run(["sudo", "chmod", "+x", str(daic_dest)], check=True)
                 except subprocess.CalledProcessError:
                     print(color("⚠️  Could not install daic command globally.", Colors.YELLOW))
-    
+
     def configure(self) -> None:
         """Interactive configuration"""
         print()
@@ -259,20 +259,20 @@ class SessionsInstaller:
         print(color("║                    CONFIGURATION SETUP                        ║", Colors.BRIGHT + Colors.CYAN))
         print(color("╚═══════════════════════════════════════════════════════════════╝", Colors.BRIGHT + Colors.CYAN))
         print()
-        
+
         self.statusline_installed = False
-        
+
         # Developer name section
         print(color(f"\n★ DEVELOPER IDENTITY", Colors.BRIGHT + Colors.MAGENTA))
         print(color("─" * 60, Colors.DIM))
         print(color("  Claude will use this name when addressing you in sessions", Colors.DIM))
         print()
-        
+
         name = input(color("  Your name: ", Colors.CYAN))
         if name:
             self.config["developer_name"] = name
             print(color(f"  ✓ Hello, {name}!", Colors.GREEN))
-        
+
         # Statusline installation section
         print(color(f"\n\n★ STATUSLINE INSTALLATION", Colors.BRIGHT + Colors.MAGENTA))
         print(color("─" * 60, Colors.DIM))
@@ -282,9 +282,9 @@ class SessionsInstaller:
         print(color("    • Modified file counts", Colors.CYAN))
         print(color("    • Open task count", Colors.CYAN))
         print()
-        
+
         install_statusline = input(color("  Install statusline? (y/n): ", Colors.CYAN))
-        
+
         if install_statusline.lower() == 'y':
             statusline_source = self.package_dir / "scripts/statusline-script.sh"
             if statusline_source.exists():
@@ -296,7 +296,7 @@ class SessionsInstaller:
                 print(color("  ✓ Statusline installed successfully", Colors.GREEN))
             else:
                 print(color("  ⚠ Statusline script not found in package", Colors.YELLOW))
-        
+
         # DAIC trigger phrases section
         print(color(f"\n\n★ DAIC WORKFLOW CONFIGURATION", Colors.BRIGHT + Colors.MAGENTA))
         print(color("─" * 60, Colors.DIM))
@@ -309,7 +309,7 @@ class SessionsInstaller:
         print()
         print(color('  Hint: Common additions: "implement it", "do it", "proceed"', Colors.DIM))
         print()
-        
+
         # Allow adding multiple custom trigger phrases
         while True:
             custom_trigger = input(color("  Add custom trigger phrase (Enter to skip): ", Colors.CYAN))
@@ -317,7 +317,7 @@ class SessionsInstaller:
                 break
             self.config["trigger_phrases"].append(custom_trigger)
             print(color(f'  ✓ Added: "{custom_trigger}"', Colors.GREEN))
-        
+
         # API Mode configuration
         print(color(f"\n\n★ THINKING BUDGET CONFIGURATION", Colors.BRIGHT + Colors.MAGENTA))
         print(color("─" * 60, Colors.DIM))
@@ -334,7 +334,7 @@ class SessionsInstaller:
         print()
         print(color("  You can toggle this anytime with: /api-mode", Colors.DIM))
         print()
-        
+
         enable_ultrathink = input(color("  Enable automatic ultrathink for best performance? (y/n): ", Colors.CYAN))
         if enable_ultrathink.lower() == 'y':
             self.config["api_mode"] = False
@@ -342,15 +342,15 @@ class SessionsInstaller:
         else:
             self.config["api_mode"] = True
             print(color("  ✓ API mode - manual ultrathink control (use [[ ultrathink ]])", Colors.GREEN))
-        
+
         # Advanced configuration
         print(color(f"\n\n★ ADVANCED OPTIONS", Colors.BRIGHT + Colors.MAGENTA))
         print(color("─" * 60, Colors.DIM))
         print(color("  Configure tool blocking, task prefixes, and more", Colors.WHITE))
         print()
-        
+
         advanced = input(color("  Configure advanced options? (y/n): ", Colors.CYAN))
-        
+
         if advanced.lower() == 'y':
             # Tool blocking
             print()
@@ -361,7 +361,7 @@ class SessionsInstaller:
             print(color("│   Default: Edit, Write, MultiEdit, NotebookEdit are blocked   │", Colors.DIM))
             print(color("╰───────────────────────────────────────────────────────────────╯", Colors.CYAN))
             print()
-            
+
             tools = [
                 ("Edit", "Edit existing files", True),
                 ("Write", "Create new files", True),
@@ -376,7 +376,7 @@ class SessionsInstaller:
                 ("WebFetch", "Fetch web content", False),
                 ("Task", "Launch specialized agents", False)
             ]
-            
+
             print(color("  Available tools:", Colors.WHITE))
             for i, (name, desc, blocked) in enumerate(tools, 1):
                 icon = "🔒" if blocked else "🔓"
@@ -385,9 +385,9 @@ class SessionsInstaller:
             print()
             print(color("  Hint: Edit tools are typically blocked to enforce discussion-first workflow", Colors.DIM))
             print()
-            
+
             modify_tools = input(color("  Modify blocked tools list? (y/n): ", Colors.CYAN))
-            
+
             if modify_tools.lower() == 'y':
                 tool_numbers = input(color("  Enter comma-separated tool numbers to block: ", Colors.CYAN))
                 if tool_numbers:
@@ -403,7 +403,7 @@ class SessionsInstaller:
                     if blocked_list:
                         self.config["blocked_tools"] = blocked_list
                         print(color("  ✓ Tool blocking configuration saved", Colors.GREEN))
-            
+
             # Task prefix configuration
             print(color(f"\n\n★ TASK PREFIX CONFIGURATION", Colors.BRIGHT + Colors.MAGENTA))
             print(color("─" * 60, Colors.DIM))
@@ -415,32 +415,32 @@ class SessionsInstaller:
             print(color("    → l- (low priority)", Colors.WHITE))
             print(color("    → ?- (investigate/research)", Colors.WHITE))
             print()
-            
+
             customize_prefixes = input(color("  Customize task prefixes? (y/n): ", Colors.CYAN))
             if customize_prefixes.lower() == 'y':
                 high = input(color("  High priority prefix [h-]: ", Colors.CYAN)) or 'h-'
                 med = input(color("  Medium priority prefix [m-]: ", Colors.CYAN)) or 'm-'
                 low = input(color("  Low priority prefix [l-]: ", Colors.CYAN)) or 'l-'
                 inv = input(color("  Investigate prefix [?-]: ", Colors.CYAN)) or '?-'
-                
+
                 self.config["task_prefixes"] = {
                     "priority": [high, med, low, inv]
                 }
-                
+
                 print(color("  ✓ Task prefixes updated", Colors.GREEN))
-    
+
     def save_config(self) -> None:
         """Save configuration files"""
         print(color("Creating configuration...", Colors.CYAN))
-        
+
         # Save sessions config
         config_file = self.project_root / "sessions/sessions-config.json"
         config_file.write_text(json.dumps(self.config, indent=2))
-        
+
         # Create or update .claude/settings.json with all hooks
         print(color("Configuring hooks in settings.json...", Colors.CYAN))
         settings_file = self.project_root / ".claude/settings.json"
-        
+
         settings = {}
         if settings_file.exists():
             print(color("Found existing settings.json, merging sessions hooks...", Colors.CYAN))
@@ -450,8 +450,8 @@ class SessionsInstaller:
                 settings = {}
         else:
             print(color("Creating new settings.json with sessions hooks...", Colors.CYAN))
-        
-        # Define the sessions hooks
+
+        # Define the consolidated sessions hooks
         sessions_hooks = {
             "UserPromptSubmit": [
                 {
@@ -465,11 +465,11 @@ class SessionsInstaller:
             ],
             "PreToolUse": [
                 {
-                    "matcher": "Write|Edit|MultiEdit|Task|Bash",
+                    "matcher": "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\sessions-enforce.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
                         }
                     ]
                 },
@@ -485,10 +485,11 @@ class SessionsInstaller:
             ],
             "PostToolUse": [
                 {
+                    "matcher": "Write|Edit|MultiEdit|NotebookEdit",
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\post-tool-use.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
                         }
                     ]
                 }
@@ -499,17 +500,47 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-start.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/enhanced_session_start.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\enhanced_session_start.py\""
+                        }
+                    ]
+                }
+            ],
+            "Stop": [
+                {
+                    "hooks": [
+                        {
+                            "type": "command",
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-lifecycle.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-lifecycle.py\""
+                        }
+                    ]
+                }
+            ],
+            "PreCompact": [
+                {
+                    "hooks": [
+                        {
+                            "type": "command",
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\""
+                        }
+                    ]
+                }
+            ],
+            "Notification": [
+                {
+                    "hooks": [
+                        {
+                            "type": "command",
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\""
                         }
                     ]
                 }
             ]
         }
-        
+
         # Merge hooks (sessions hooks take precedence)
         if "hooks" not in settings:
             settings["hooks"] = {}
-        
+
         # Merge each hook type
         for hook_type, hook_config in sessions_hooks.items():
             if hook_type not in settings["hooks"]:
@@ -517,7 +548,7 @@ class SessionsInstaller:
             else:
                 # Append sessions hooks to existing ones
                 settings["hooks"][hook_type].extend(hook_config)
-        
+
         # Add statusline if requested
         if hasattr(self, 'statusline_installed') and self.statusline_installed:
             settings["statusLine"] = {
@@ -525,15 +556,15 @@ class SessionsInstaller:
                 "command": "$CLAUDE_PROJECT_DIR/.claude/statusline-script.sh" if os.name != 'nt' else "%CLAUDE_PROJECT_DIR%\\.claude\\statusline-script.sh",
                 "padding": 0
             }
-        
+
         # Save the updated settings
         settings_file.write_text(json.dumps(settings, indent=2))
         print(color("✓ Sessions hooks configured in settings.json", Colors.GREEN))
-        
+
         # Initialize DAIC state
         daic_state = self.project_root / ".claude/state/daic-mode.json"
         daic_state.write_text(json.dumps({"mode": "discussion"}, indent=2))
-        
+
         # Create initial task state
         current_date = datetime.now().strftime("%Y-%m-%d")
         task_state = self.project_root / ".claude/state/current_task.json"
@@ -543,7 +574,7 @@ class SessionsInstaller:
             "services": [],
             "updated": current_date
         }, indent=2))
-    
+
     def setup_claude_md(self) -> None:
         """Set up CLAUDE.md integration"""
         print()
@@ -551,29 +582,29 @@ class SessionsInstaller:
         print(color("         CLAUDE.md Integration", Colors.BRIGHT))
         print(color("═══════════════════════════════════════════", Colors.BRIGHT))
         print()
-        
+
         # Check for existing CLAUDE.md
         sessions_md = self.package_dir / "templates/CLAUDE.sessions.md"
         claude_md = self.project_root / "CLAUDE.md"
-        
+
         if claude_md.exists():
             # File exists, preserve it and add sessions as separate file
             print(color("CLAUDE.md already exists, preserving your project-specific rules...", Colors.CYAN))
-            
+
             # Copy CLAUDE.sessions.md as separate file
             if sessions_md.exists():
                 dest = self.project_root / "CLAUDE.sessions.md"
                 shutil.copy2(sessions_md, dest)
-            
+
             # Check if it already includes sessions
             content = claude_md.read_text()
             if "@CLAUDE.sessions.md" not in content:
                 print(color("Adding sessions include to existing CLAUDE.md...", Colors.CYAN))
-                
+
                 addition = "\n## Sessions System Behaviors\n\n@CLAUDE.sessions.md\n"
                 with claude_md.open("a") as f:
                     f.write(addition)
-                
+
                 print(color("✅ Added @CLAUDE.sessions.md include to your CLAUDE.md", Colors.GREEN))
             else:
                 print(color("✅ CLAUDE.md already includes sessions behaviors", Colors.GREEN))
@@ -583,21 +614,21 @@ class SessionsInstaller:
             if sessions_md.exists():
                 shutil.copy2(sessions_md, claude_md)
                 print(color("✅ CLAUDE.md created with complete sessions behaviors", Colors.GREEN))
-    
+
     def run(self) -> None:
         """Run the full installation process"""
         print(color("╔════════════════════════════════════════════╗", Colors.BRIGHT))
         print(color("║            cc-sessions Installer           ║", Colors.BRIGHT))
         print(color("╚════════════════════════════════════════════╝", Colors.BRIGHT))
         print()
-        
+
         # Check CLAUDE_PROJECT_DIR
         if not os.environ.get("CLAUDE_PROJECT_DIR"):
             print(color(f"⚠️  CLAUDE_PROJECT_DIR not set. Setting it to {self.project_root}", Colors.YELLOW))
             print("   To make this permanent, add to your shell profile:")
             print(f'   export CLAUDE_PROJECT_DIR="{self.project_root}"')
             print()
-        
+
         try:
             self.check_dependencies()
             self.create_directories()
@@ -607,7 +638,7 @@ class SessionsInstaller:
             self.configure()
             self.save_config()
             self.setup_claude_md()
-            
+
             # Success message
             print()
             print()
@@ -615,7 +646,7 @@ class SessionsInstaller:
             print(color("║                 🎉 INSTALLATION COMPLETE! 🎉                  ║", Colors.BRIGHT + Colors.GREEN))
             print(color("╚═══════════════════════════════════════════════════════════════╝", Colors.BRIGHT + Colors.GREEN))
             print()
-            
+
             print(color("  Installation Summary:", Colors.BRIGHT + Colors.CYAN))
             print(color("  ─────────────────────", Colors.DIM))
             print(color("  ✓ Directory structure created", Colors.GREEN))
@@ -624,19 +655,19 @@ class SessionsInstaller:
             print(color("  ✓ daic command available globally", Colors.GREEN))
             print(color("  ✓ Configuration saved", Colors.GREEN))
             print(color("  ✓ DAIC state initialized (Discussion mode)", Colors.GREEN))
-            
+
             if hasattr(self, 'statusline_installed') and self.statusline_installed:
                 print(color("  ✓ Statusline configured", Colors.GREEN))
-            
+
             print()
-            
+
             # Test daic command
             if command_exists("daic"):
                 print(color("  ✓ daic command verified and working", Colors.GREEN))
             else:
                 print(color("  ⚠ daic command not in PATH", Colors.YELLOW))
                 print(color("       Add /usr/local/bin to your PATH", Colors.DIM))
-            
+
             print()
             print(color("  ★ NEXT STEPS", Colors.BRIGHT + Colors.MAGENTA))
             print(color("  ─────────────", Colors.DIM))
@@ -656,7 +687,7 @@ class SessionsInstaller:
             print(color("  ──────────────────────────────────────────────────────", Colors.DIM))
             print()
             print(color(f"  Welcome aboard, {self.config['developer_name']}! 🚀", Colors.BRIGHT + Colors.CYAN))
-            
+
         except Exception as e:
             print(color(f"❌ Installation failed: {e}", Colors.RED))
             sys.exit(1)

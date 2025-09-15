@@ -292,7 +292,7 @@ if [ "$advanced_config" = "y" ]; then
             echo -e "${YELLOW}  Please enter y or n${NC}"
         fi
     done
-    
+
     if [[ $modify_tools == "y" ]]; then
         read -p "$(echo -e ${CYAN})  Enter comma-separated tool numbers to block: $(echo -e ${NC})" tool_numbers
         if [ -n "$tool_numbers" ]; then
@@ -331,7 +331,7 @@ if [ "$advanced_config" = "y" ]; then
     echo -e "${WHITE}    → l- (low priority)${NC}"
     echo -e "${WHITE}    → ?- (investigate/research)${NC}"
     echo
-    
+
     while true; do
         read -p "$(echo -e ${CYAN})  Customize task prefixes? (y/n): $(echo -e ${NC})" -r
         if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -344,18 +344,18 @@ if [ "$advanced_config" = "y" ]; then
             echo -e "${YELLOW}  Please enter y or n${NC}"
         fi
     done
-    
+
     if [[ $customize_prefixes == "y" ]]; then
         read -p "$(echo -e ${CYAN})  High priority prefix [h-]: $(echo -e ${NC})" high_prefix
         read -p "$(echo -e ${CYAN})  Medium priority prefix [m-]: $(echo -e ${NC})" med_prefix
         read -p "$(echo -e ${CYAN})  Low priority prefix [l-]: $(echo -e ${NC})" low_prefix
         read -p "$(echo -e ${CYAN})  Investigate prefix [?-]: $(echo -e ${NC})" inv_prefix
-        
+
         high_prefix="${high_prefix:-h-}"
         med_prefix="${med_prefix:-m-}"
         low_prefix="${low_prefix:-l-}"
         inv_prefix="${inv_prefix:-?-}"
-        
+
         task_prefixes_config=',
   "task_prefixes": {
     "priority": ["'$high_prefix'", "'$med_prefix'", "'$low_prefix'", "'$inv_prefix'"]
@@ -389,7 +389,7 @@ if [ -f "$PROJECT_ROOT/.claude/settings.json" ]; then
     cp "$PROJECT_ROOT/.claude/settings.json" "$PROJECT_ROOT/.claude/settings.json.bak"
 fi
 
-# Create settings.json with all hooks
+# Create settings.json with consolidated hooks
 settings_content='{
   "hooks": {
     "UserPromptSubmit": [
@@ -404,11 +404,11 @@ settings_content='{
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|Task|Bash",
+        "matcher": "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/sessions-enforce.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
           }
         ]
       },
@@ -424,10 +424,11 @@ settings_content='{
     ],
     "PostToolUse": [
       {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-tool-use.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
           }
         ]
       }
@@ -438,7 +439,37 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/enhanced_session_start.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-lifecycle.py"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
           }
         ]
       }
@@ -492,7 +523,7 @@ else
     echo "CLAUDE.md already exists, preserving your project-specific rules..."
     # Copy CLAUDE.sessions.md as separate file
     cp "$SCRIPT_DIR/cc_sessions/templates/CLAUDE.sessions.md" "$PROJECT_ROOT/CLAUDE.sessions.md"
-    
+
     # Check if the include already exists
     if grep -q "@CLAUDE.sessions.md" "$PROJECT_ROOT/CLAUDE.md"; then
         echo "✅ CLAUDE.md already includes sessions behaviors"
