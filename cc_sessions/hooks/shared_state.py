@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Shared state management for Claude Code Sessions hooks."""
 import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 
 # Get project root dynamically
 def get_project_root():
@@ -14,6 +15,18 @@ def get_project_root():
         current = current.parent
     # Fallback to current directory if no .claude found
     return Path.cwd()
+
+def get_workspace_root():
+    """Find workspace root (parent of project root) for multi-repo awareness."""
+    project_root = get_project_root()
+    # Look for common workspace indicators
+    workspace_indicators = ['.vscode', '.idea', 'workspace.code-workspace', '.git']
+    current = project_root.parent
+    while current.parent != current:
+        if any((current / indicator).exists() for indicator in workspace_indicators):
+            return current
+        current = current.parent
+    return project_root.parent
 
 PROJECT_ROOT = get_project_root()
 
@@ -65,12 +78,12 @@ def toggle_daic_mode() -> str:
             current_mode = data.get("mode", "discussion")
     except (FileNotFoundError, json.JSONDecodeError):
         current_mode = "discussion"
-    
+
     # Toggle and write new value
     new_mode = "implementation" if current_mode == "discussion" else "discussion"
     with open(DAIC_STATE_FILE, 'w') as f:
         json.dump({"mode": new_mode}, f, indent=2)
-    
+
     # Return appropriate message
     return IMPLEMENTATION_MODE_MSG if new_mode == "implementation" else DISCUSSION_MODE_MSG
 
@@ -85,7 +98,7 @@ def set_daic_mode(value: str|bool):
         name = "Implementation Mode"
     else:
         raise ValueError(f"Invalid mode value: {value}")
-    
+
     with open(DAIC_STATE_FILE, 'w') as f:
         json.dump({"mode": mode}, f, indent=2)
     return name
@@ -121,3 +134,82 @@ def add_service_to_task(service: str):
         with open(TASK_STATE_FILE, 'w') as f:
             json.dump(state, f, indent=2)
     return state
+
+class SharedState:
+    """Wrapper class for shared state management to maintain compatibility with new hooks."""
+
+    def __init__(self):
+        self.state_dir = STATE_DIR
+        self.daic_state_file = DAIC_STATE_FILE
+        self.task_state_file = TASK_STATE_FILE
+        self.project_root = PROJECT_ROOT
+        self.workspace_root = get_workspace_root()
+
+    def get_daic_mode(self) -> str:
+        """Get current DAIC mode."""
+        return check_daic_mode()
+
+    def set_daic_mode(self, mode: str) -> str:
+        """Set DAIC mode."""
+        return set_daic_mode(mode)
+
+    def get_current_task(self) -> dict:
+        """Get current task state."""
+        return get_task_state()
+
+    def update_current_task(self, task: dict) -> dict:
+        """Update current task state."""
+        return set_task_state(
+            task.get("task", ""),
+            task.get("branch", ""),
+            task.get("services", [])
+        )
+
+    def get_enforcement_state(self) -> dict:
+        """Get enforcement state (placeholder for compatibility)."""
+        return {"enforcement_active": False}
+
+    def get_compaction_metadata(self) -> dict:
+        """Get compaction metadata (placeholder for compatibility)."""
+        return {"last_compaction": None}
+
+    def log_tool_usage(self, log_entry: dict) -> None:
+        """Log tool usage (placeholder for compatibility)."""
+        # In a real implementation, this would log to a file
+        pass
+
+    def log_command_execution(self, log_entry: dict) -> None:
+        """Log command execution (placeholder for compatibility)."""
+        # In a real implementation, this would log to a file
+        pass
+
+    def log_warning(self, message: str) -> None:
+        """Log warning message (placeholder for compatibility)."""
+        # In a real implementation, this would log to a file
+        pass
+
+    def log_error(self, message: str) -> None:
+        """Log error message (placeholder for compatibility)."""
+        # In a real implementation, this would log to a file
+        pass
+
+    def get_tool_usage_log(self) -> list:
+        """Get tool usage log (placeholder for compatibility)."""
+        return []
+
+    def get_context_usage_log(self) -> list:
+        """Get context usage log (placeholder for compatibility)."""
+        return []
+
+    def get_workflow_events(self) -> list:
+        """Get workflow events (placeholder for compatibility)."""
+        return []
+
+    def get_error_log(self) -> list:
+        """Get error log (placeholder for compatibility)."""
+        return []
+
+    def update_compaction_metadata(self, metadata: dict) -> None:
+        """Update compaction metadata (placeholder for compatibility)."""
+        # In a real implementation, this would update metadata
+        pass

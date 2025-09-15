@@ -38,6 +38,7 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
+    "psutil>=7.0.0",
     "tiktoken>=0.5.0",
 ]
 
