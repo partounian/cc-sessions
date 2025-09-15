@@ -560,7 +560,7 @@ class SessionsInstaller:
         # Save the updated settings
         settings_file.write_text(json.dumps(settings, indent=2))
         print(color("✓ Sessions hooks configured in settings.json", Colors.GREEN))
-        
+
         # Validate hook files exist
         self.validate_hook_installation()
 
@@ -577,12 +577,12 @@ class SessionsInstaller:
             "services": [],
             "updated": current_date
         }, indent=2))
-    
+
     def validate_hook_installation(self) -> None:
         """Validate that all hook files are properly installed"""
         required_hooks = [
             "workflow-manager.py",
-            "session-lifecycle.py", 
+            "session-lifecycle.py",
             "context-manager.py",
             "enhanced_shared_state.py",
             "enhanced_session_start.py",
@@ -590,45 +590,45 @@ class SessionsInstaller:
             "user-messages.py",
             "task-transcript-link.py"
         ]
-        
+
         hooks_dir = self.project_root / ".claude/hooks"
         missing_hooks = []
-        
+
         for hook in required_hooks:
             hook_path = hooks_dir / hook
             if not hook_path.exists():
                 missing_hooks.append(hook)
-        
+
         if missing_hooks:
             print(color(f"⚠️ Missing hook files: {', '.join(missing_hooks)}", Colors.YELLOW))
         else:
             print(color("✓ All hook files validated", Colors.GREEN))
-    
+
     def validate_installation(self) -> bool:
         """Validate the complete installation"""
         issues = []
-        
+
         # Check hook files
         hooks_dir = self.project_root / ".claude/hooks"
         if not hooks_dir.exists():
             issues.append("Hooks directory missing")
-        
+
         # Check state directory
         state_dir = self.project_root / ".claude/state"
         if not state_dir.exists():
             issues.append("State directory missing")
-        
+
         # Check sessions config
         sessions_config = self.project_root / "sessions/sessions-config.json"
         if not sessions_config.exists():
             issues.append("Sessions configuration missing")
-        
+
         if issues:
             print(color(f"⚠️ Installation issues: {', '.join(issues)}", Colors.YELLOW))
             return False
-        
+
         return True
-    
+
     def setup_claude_md(self) -> None:
         """Set up CLAUDE.md integration"""
         print()

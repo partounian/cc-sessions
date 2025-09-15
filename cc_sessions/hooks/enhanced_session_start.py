@@ -247,21 +247,21 @@ def initialize_workspace_awareness(shared_state):
         # Set up workspace awareness
         workspace_context = shared_state.setup_workspace_awareness()
 
-    # Detect repositories (with timeout protection)
-    try:
-        repositories = shared_state.detect_workspace_repositories()
-        print(f"Detected {len(repositories)} repositories:")
+        # Detect repositories (with timeout protection)
+        try:
+            repositories = shared_state.detect_workspace_repositories()
+            print(f"Detected {len(repositories)} repositories:")
 
-        # Limit output to prevent overwhelming the console
-        for i, repo in enumerate(repositories[:10]):  # Show only first 10
-            print(f"  - {repo.name} ({repo})")
-        
-        if len(repositories) > 10:
-            print(f"  ... and {len(repositories) - 10} more repositories")
+            # Limit output to prevent overwhelming the console
+            for i, repo in enumerate(repositories[:10]):  # Show only first 10
+                print(f"  - {repo.name} ({repo})")
             
-    except Exception as e:
-        print(f"Warning: Repository detection failed: {e}")
-        repositories = []
+            if len(repositories) > 10:
+                print(f"  ... and {len(repositories) - 10} more repositories")
+                
+        except Exception as e:
+            print(f"Warning: Repository detection failed: {e}")
+            repositories = []
 
         # Create workspace agent configurations
         create_workspace_agent_configs(shared_state)
