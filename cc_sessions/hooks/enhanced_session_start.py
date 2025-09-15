@@ -252,12 +252,9 @@ def initialize_workspace_awareness(shared_state):
             repositories = shared_state.detect_workspace_repositories()
             print(f"Detected {len(repositories)} repositories:")
 
-            # Limit output to prevent overwhelming the console
-            for i, repo in enumerate(repositories[:10]):  # Show only first 10
+            # Show all detected repositories (max 10)
+            for repo in repositories:
                 print(f"  - {repo.name} ({repo})")
-            
-            if len(repositories) > 10:
-                print(f"  ... and {len(repositories) - 10} more repositories")
                 
         except Exception as e:
             print(f"Warning: Repository detection failed: {e}")

@@ -171,24 +171,24 @@ class EnhancedSharedState:
         # Directories to exclude from repository detection
         excluded_patterns = [
             '.cache', 'cache', '__pycache__', 'node_modules', '.npm', '.yarn', '.pnpm',
-            '.local', '.config', 'Library', 'AppData', '.vscode', '.idea', '.vs', 
+            '.local', '.config', 'Library', 'AppData', '.vscode', '.idea', '.vs',
             'build', 'dist', '.uv', '.cargo', '.rustup', '.gem', '.pip',
             'lazy', 'checkpoints', 'globalStorage', 'Application Support'
         ]
 
         # Use a more efficient approach - limit search depth and add early termination
-        max_repos = 20
-        search_depth = 3  # Limit recursion depth
-        
+        max_repos = 10
+        search_depth = 1  # Limit recursion depth
+
         def _search_repos(path: Path, depth: int = 0) -> None:
             if depth > search_depth or len(repositories) >= max_repos:
                 return
-                
+
             try:
                 for item in path.iterdir():
                     if len(repositories) >= max_repos:
                         break
-                        
+
                     if item.is_dir():
                         if item.name == '.git':
                             repo_path = item.parent
@@ -202,14 +202,14 @@ class EnhancedSharedState:
                 pass
 
         _search_repos(self.workspace_root)
-        
+
         # Sort by modification time (most recent first)
         try:
             repositories.sort(key=lambda p: p.stat().st_mtime, reverse=True)
         except OSError:
             pass  # If we can't stat files, keep original order
 
-        return repositories[:max_repos]
+        return repositories[:10]  # Ensure we never return more than 10 repositories
 
     def setup_workspace_awareness(self) -> Dict[str, Any]:
         """Set up workspace awareness for cc-sessions"""
