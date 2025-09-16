@@ -469,7 +469,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
                         }
                     ]
                 },
@@ -489,7 +489,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
                         }
                     ]
                 }
@@ -581,7 +581,7 @@ class SessionsInstaller:
     def validate_hook_installation(self) -> None:
         """Validate that all hook files are properly installed"""
         required_hooks = [
-            "workflow-manager.py",
+            "workflow_manager.py",
             "session_lifecycle.py",
             "context_manager.py",
         "shared_state.py",
