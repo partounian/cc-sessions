@@ -22,33 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _No breaking changes._
 
-## [1.0.0] - 2025-09-15
-
-### Added
-
-- Initial release of cc-sessions framework
-- Core Claude Code hooks system:
-  - `session-start.py` - Session initialization and setup
-  - `user-messages.py` - User message processing and context management
-  - `post-tool-use.py` - Post-execution tool result processing
-  - `task-transcript-link.py` - Task and transcript management
-- DAIC (Discussion/Implementation) mode switching
-- State management with JSON persistence
-- Agent delegation system for specialized tasks
-- Context compaction protocols
-- Basic validation and testing framework
-
-### Features
-
-- Context window optimization for LLM workflows
-- Task-based workflow management
-- Agent specialization for different development tasks
-- State persistence across sessions
-- Transcript chunking and management
-- Basic performance monitoring
-
----
-
 ## Legend
 
 - **Added** for new features
@@ -60,7 +33,6 @@ _No breaking changes._
 
 ## Version History
 
-- **v1.0.0** - Initial release with core cc-sessions functionality
 - **Unreleased** - Major enhancement with multi-repository support and agent-centric improvements
 
 ## Migration Guide
