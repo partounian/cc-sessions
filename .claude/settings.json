@@ -6,7 +6,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user_messages.py"
                     }
                 ]
             }
@@ -17,7 +17,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py"
                     }
                 ]
             },
@@ -26,7 +26,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task_transcript_link.py"
                     }
                 ]
             }
@@ -37,7 +37,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py"
                     }
                 ]
             }
@@ -47,7 +47,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/enhanced_session_start.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py"
                     }
                 ]
             }
@@ -57,7 +57,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-lifecycle.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session_lifecycle.py"
                     }
                 ]
             }
@@ -67,7 +67,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py"
                     }
                 ]
             }
@@ -77,7 +77,7 @@
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+                        "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py"
                     }
                 ]
             }
