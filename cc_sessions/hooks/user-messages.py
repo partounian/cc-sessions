@@ -22,7 +22,7 @@ try:
     from shared_state import get_project_root
     PROJECT_ROOT = get_project_root()
     CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
-    
+
     if CONFIG_FILE.exists():
         with open(CONFIG_FILE, 'r') as f:
             config = json.load(f)
@@ -49,13 +49,13 @@ def get_context_length_from_transcript(transcript_path):
         import os
         if not os.path.exists(transcript_path):
             return 0
-            
+
         with open(transcript_path, 'r') as f:
             lines = f.readlines()
-        
+
         most_recent_usage = None
         most_recent_timestamp = None
-        
+
         # Parse each JSONL entry
         for line in lines:
             try:
@@ -63,7 +63,7 @@ def get_context_length_from_transcript(transcript_path):
                 # Skip sidechain entries (subagent calls)
                 if data.get('isSidechain', False):
                     continue
-                    
+
                 # Check if this entry has usage data
                 if data.get('message', {}).get('usage'):
                     entry_time = data.get('timestamp')
@@ -73,7 +73,7 @@ def get_context_length_from_transcript(transcript_path):
                         most_recent_usage = data['message']['usage']
             except json.JSONDecodeError:
                 continue
-        
+
         # Calculate context length from most recent usage
         if most_recent_usage:
             context_length = (
@@ -89,17 +89,17 @@ def get_context_length_from_transcript(transcript_path):
 # Check context usage and warn if needed (only if tiktoken is available)
 if transcript_path and tiktoken and os.path.exists(transcript_path):
     context_length = get_context_length_from_transcript(transcript_path)
-    
+
     if context_length > 0:
         # Calculate percentage of usable context (160k practical limit before auto-compact)
         usable_percentage = (context_length / 160000) * 100
-        
+
         # Check for warning flag files to avoid repeating warnings
         from pathlib import Path
         PROJECT_ROOT = get_project_root()
         warning_75_flag = PROJECT_ROOT / ".claude" / "state" / "context-warning-75.flag"
         warning_90_flag = PROJECT_ROOT / ".claude" / "state" / "context-warning-90.flag"
-        
+
         # Token warnings (only show once per session)
         if usable_percentage >= 90 and not warning_90_flag.exists():
             context += f"\n[90% WARNING] {context_length:,}/160,000 tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
@@ -135,7 +135,7 @@ if any(phrase in prompt_lower for phrase in ["compact", "restart session", "cont
     context += "If the user is asking to compact context, read and follow sessions/protocols/context-compaction.md protocol.\n"
 
 # Task completion detection
-if any(phrase in prompt_lower for phrase in ["complete the task", "finish the task", "task is done", 
+if any(phrase in prompt_lower for phrase in ["complete the task", "finish the task", "task is done",
                                                "mark as complete", "close the task", "wrap up the task"]):
     context += "If the user is asking to complete the task, read and follow sessions/protocols/task-completion.md protocol.\n"
 
@@ -158,9 +158,9 @@ if config.get("task_detection", {}).get("enabled", True):
         r"(?i)that's a separate (task|issue|problem)",
         r"(?i)file this as a (bug|task|issue)"
     ]
-    
+
     task_mentioned = any(re.search(pattern, prompt) for pattern in task_patterns)
-    
+
     if task_mentioned:
         # Add task detection note
         context += """
@@ -182,12 +182,7 @@ If they want to create a task, follow the task creation protocol.
 
 # Output the context additions
 if context:
-    output = {
-        "hookSpecificOutput": {
-            "hookEventName": "UserPromptSubmit",
-            "additionalContext": context
-        }
-    }
-    print(json.dumps(output))
+    # For UserPromptSubmit we emit only readable text (wrapped in a tag for clarity)
+    print(f"<daic-context>\n{context}\n</daic-context>")
 
 sys.exit(0)

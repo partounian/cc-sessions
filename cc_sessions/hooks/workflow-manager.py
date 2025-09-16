@@ -325,10 +325,14 @@ def main():
                 print(f"You're already in discussion mode. Be sure to propose your intended edits/plans to the user and seek their explicit approval, which will unlock implementation mode.", file=sys.stderr)
                 sys.exit(2)  # Block with feedback
 
-        # Block configured tools in discussion mode
+        # Block configured tools in discussion mode (except task selection)
         if discussion_mode and tool_name in config.get("blocked_tools", DEFAULT_CONFIG["blocked_tools"]):
-            print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
-            sys.exit(2)  # Block with feedback
+            # Allow task selection operations even in DAIC mode
+            if tool_name == "Edit" and "current_task.json" in tool_input.get("path", ""):
+                pass  # Allow task selection
+            else:
+                print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
+                sys.exit(2)  # Block with feedback
 
         # Check subagent boundaries
         if not check_subagent_boundaries(tool_name, tool_input):
@@ -348,7 +352,7 @@ def main():
         # Log the error for debugging
         error_msg = f"Error: Unexpected error in workflow manager: {e}"
         print(error_msg, file=sys.stderr)
-        
+
         # Try to log to shared state if possible
         try:
             from hooks.shared_state import SharedState
@@ -356,7 +360,7 @@ def main():
             shared_state.log_error(error_msg)
         except:
             pass  # If logging fails, continue gracefully
-        
+
         # In case of critical errors, allow tool to proceed rather than blocking completely
         # This prevents the system from becoming completely unusable
         if "critical" not in str(e).lower():

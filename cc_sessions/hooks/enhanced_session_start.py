@@ -255,7 +255,7 @@ def initialize_workspace_awareness(shared_state):
             # Show all detected repositories (max 10)
             for repo in repositories:
                 print(f"  - {repo.name} ({repo})")
-                
+
         except Exception as e:
             print(f"Warning: Repository detection failed: {e}")
             repositories = []
@@ -365,13 +365,9 @@ def main():
         # Initialize enhanced session
         context = initialize_enhanced_session()
 
-        output = {
-            "hookSpecificOutput": {
-                "hookEventName": "EnhancedSessionStart",
-                "additionalContext": context
-            }
-        }
-        print(json.dumps(output))
+        # Output human-readable context only (no JSON for SessionStart)
+        # Wrap in a simple tag so the runner can still collapse the block if desired.
+        print(f"<session-start>\n{context}\n</session-start>")
 
     except Exception as e:
         error_output = {

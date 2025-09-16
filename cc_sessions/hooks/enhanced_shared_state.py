@@ -70,13 +70,20 @@ class EnhancedSharedState:
     def _get_workspace_root(self) -> Path:
         """Find workspace root (parent of project root) for multi-repo awareness."""
         project_root = self.project_root
-        # Look for common workspace indicators
-        workspace_indicators = ['.vscode', '.idea', 'workspace.code-workspace', '.git']
+
+        # First, check if the project root itself contains multiple repositories
+        git_dirs = list(project_root.glob('*/.git'))
+        if len(git_dirs) > 1:
+            return project_root
+
+        # Look for common workspace indicators in parent directories
+        workspace_indicators = ['.vscode', 'workspace.code-workspace', '.idea']
         current = project_root.parent
         while current.parent != current:
             if any((current / indicator).exists() for indicator in workspace_indicators):
                 return current
             current = current.parent
+
         # If no workspace indicators found, use project root as workspace root
         return project_root
 
