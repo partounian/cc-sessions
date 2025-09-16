@@ -7,62 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Consolidated Hook System** - Reduced from 15 to 8 hooks (47% reduction) for improved maintainability
-- Multi-repository workspace support with automatic repository detection
-- Cross-repository task management and coordination system
-- Workspace-aware context sharing and preservation
-- 8 optimized Claude Code hooks for enhanced workflow management:
-  - `workflow-manager.py` - Unified DAIC enforcement and post-tool-use management
-  - `session-lifecycle.py` - Comprehensive session analytics and cleanup
-  - `context-manager.py` - Context preservation and notification handling
-  - `enhanced_shared_state.py` - Multi-repository state management
-  - `enhanced_session_start.py` - Workspace-aware session initialization
-  - `pre-tool-use.py` - Enhanced security-focused tool validation
-  - `user-messages.py` - DAIC triggers and token monitoring (unchanged)
-  - `task-transcript-link.py` - Subagent delegation (unchanged)
-- Formal Agent Interface Specification for standardized agent communication
-- Agent Runtime Framework for lifecycle management and coordination
-- Context optimization strategies for LLM agentic workflows
-- Workspace-specific agent configurations:
-  - Cross-repository analyzer agent
-  - Workspace coordinator agent
-- Comprehensive validation suite with unit tests, integration tests, and performance benchmarking
-- Multi-repository configuration management system
-- Workspace task manager for cross-repo task coordination
-- Enhanced shared state management with workspace awareness
-- Performance monitoring and optimization tools
-- Detailed architectural analysis and improvement roadmap
-
-### Enhanced
-
-- **Performance Improvements** - 30-40% faster hook execution, 29% reduction in memory usage
-- **Context Efficiency** - Up to 40% reduction in context window usage through intelligent optimization
-- `shared_state.py` - Added workspace awareness and multi-repo support
-- `pre-tool-use.py` - Enhanced with workspace boundary respect
-- `pre-compact.py` - Improved with multi-repo context preservation
-- Context management system for better token efficiency
-- Error handling and recovery mechanisms
-- State persistence and management
-
 ### Changed
 
-- **Hook Architecture** - Consolidated 15 individual hooks into 8 optimized, unified hooks
-- **State Management** - Unified state management with enhanced multi-repository support
-- **Workflow Enforcement** - Combined DAIC enforcement and post-tool-use reminders into single hook
-- **Session Management** - Merged session analytics and cleanup into comprehensive lifecycle management
-- Hook execution now respects workspace boundaries
-- Context preservation includes cross-repository awareness
-- Task management supports multi-repository workflows
-- Performance thresholds adjusted for multi-repo operations
+- **Repository detection** – improved algorithm (depth 1, max 10 repos, cache-directory exclusions, optional include/exclude lists).
+- **SessionStart / UserPromptSubmit** – now emit human-readable text wrapped in simple tags instead of JSON blobs.
+- **DAIC workflow** – `workflow-manager.py` allows edits to `.claude/state/current_task.json` while still blocking code edits during discussion mode.
+- **Hook exit-codes** – audited: hooks consistently use 0 (success), 1 (fatal), 2 (per-tool block) as per Claude Code spec.
+- **Settings** – duplicate/legacy hook registrations removed; only consolidated hooks remain.
 
-### Security
+### Removed
 
-- File operations now validate against workspace boundaries
-- Cross-repository operations require explicit configuration
-- Enhanced input validation and sanitization
-- Workspace-safe tool parameter validation
+- Legacy `session-start.py` and other orphan/backup hook files.
+- Root-level analysis docs superseded by README / CHANGELOG.
+
+_No breaking changes._
 
 ## [1.0.0] - 2025-09-15
 
