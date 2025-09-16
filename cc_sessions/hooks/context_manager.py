@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional
 # Add the cc_sessions directory to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Multi-repo functionality is now integrated into enhanced_shared_state
+# Multi-repo functionality is now integrated into shared_state
 from hooks.shared_state import SharedState
 
 
@@ -40,7 +40,7 @@ class ContextManager:
         self.agent_context_dir = self.context_dir / 'agent_context'
         self.compaction_dir = self.context_dir / 'compaction'
 
-        # Multi-repo awareness is now handled by enhanced_shared_state
+        # Multi-repo awareness is now handled by shared_state
         # self.multi_repo_config = get_multi_repo_config(self.shared_state.workspace_root)
 
         # Ensure directories exist

@@ -439,7 +439,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/enhanced_session_start.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py"
           }
         ]
       }

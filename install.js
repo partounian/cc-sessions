@@ -689,7 +689,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\enhanced_session_start.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/enhanced_session_start.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session_start.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py"
           }
         ]
       }

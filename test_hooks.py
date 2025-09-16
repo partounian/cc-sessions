@@ -42,28 +42,28 @@ def test_workflow_manager():
         return False
 
 
-def test_enhanced_session_start():
-    """Test enhanced session start hook"""
-    print("Testing enhanced_session_start.py...")
+def test_session_start():
+    """Test session start hook"""
+    print("Testing session_start.py...")
     
     try:
         result = subprocess.run(
-            [sys.executable, "cc_sessions/hooks/enhanced_session_start.py"],
+            [sys.executable, "cc_sessions/hooks/session_start.py"],
             text=True,
             capture_output=True,
             timeout=15
         )
         
         if result.returncode == 0:
-            print("✅ enhanced_session_start.py: PASS")
+            print("✅ session_start.py: PASS")
             return True
         else:
-            print(f"❌ enhanced_session_start.py: FAIL (exit code {result.returncode})")
+            print(f"❌ session_start.py: FAIL (exit code {result.returncode})")
             print(f"stderr: {result.stderr}")
             return False
             
     except Exception as e:
-        print(f"❌ enhanced_session_start.py: ERROR - {e}")
+        print(f"❌ session_start.py: ERROR - {e}")
         return False
 
 
@@ -77,7 +77,7 @@ def test_context_manager():
     
     try:
         result = subprocess.run(
-            [sys.executable, "cc_sessions/hooks/context-manager.py"],
+            [sys.executable, "cc_sessions/hooks/context_manager.py"],
             input=json.dumps(test_input),
             text=True,
             capture_output=True,
@@ -107,7 +107,7 @@ def test_session_lifecycle():
     
     try:
         result = subprocess.run(
-            [sys.executable, "cc_sessions/hooks/session-lifecycle.py"],
+            [sys.executable, "cc_sessions/hooks/session_lifecycle.py"],
             input=json.dumps(test_input),
             text=True,
             capture_output=True,
@@ -133,7 +133,7 @@ def main():
     
     tests = [
         test_workflow_manager,
-        test_enhanced_session_start,
+        test_session_start,
         test_context_manager,
         test_session_lifecycle
     ]

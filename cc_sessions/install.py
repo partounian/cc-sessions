@@ -500,7 +500,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/enhanced_session_start.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\enhanced_session_start.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session_start.py\""
                         }
                     ]
                 }
@@ -582,13 +582,13 @@ class SessionsInstaller:
         """Validate that all hook files are properly installed"""
         required_hooks = [
             "workflow-manager.py",
-            "session-lifecycle.py",
-            "context-manager.py",
-            "enhanced_shared_state.py",
-            "enhanced_session_start.py",
-            "pre-tool-use.py",
-            "user-messages.py",
-            "task-transcript-link.py"
+            "session_lifecycle.py",
+            "context_manager.py",
+        "shared_state.py",
+        "session_start.py",
+            "pre_tool_use.py",
+            "user_messages.py",
+            "task_transcript_link.py"
         ]
 
         hooks_dir = self.project_root / ".claude/hooks"

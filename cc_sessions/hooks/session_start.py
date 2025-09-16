@@ -23,11 +23,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from enhanced_shared_state import (ensure_state_dir, get_project_root,
+from shared_state import (ensure_state_dir, get_project_root,
                                    get_shared_state, get_task_state)
 
 
-def initialize_enhanced_session():
+def initialize_session():
     """Initialize enhanced session with workspace awareness"""
     print("Initializing enhanced cc-sessions with workspace awareness...")
 
@@ -363,7 +363,7 @@ def main():
     """Main entry point for Enhanced Session Start hook"""
     try:
         # Initialize enhanced session
-        context = initialize_enhanced_session()
+        context = initialize_session()
 
         # Output human-readable context only (no JSON for SessionStart)
         # Wrap in a simple tag so the runner can still collapse the block if desired.

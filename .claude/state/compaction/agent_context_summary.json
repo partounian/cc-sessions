@@ -1,0 +1,22 @@
+{
+  "timestamp": "2025-09-16T16:11:13.522231",
+  "active_agents": [],
+  "agent_states": {},
+  "context_requirements": {
+    "current_task": {
+      "task": null,
+      "branch": null,
+      "services": [],
+      "updated": null
+    },
+    "context_sources": [
+      "daic_mode"
+    ],
+    "relevance_filters": {
+      "current_task_relevance": true,
+      "agent_context_relevance": true,
+      "workflow_state_relevance": true
+    }
+  },
+  "agent_dependencies": {}
+}
