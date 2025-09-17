@@ -62,3 +62,8 @@ docs/.doctrees
 *.tmp
 .tmp/
 tmp/
+# Local runtime state (generated)
+.claude/
+
+# Local sessions workspace (generated)
+/sessions/
