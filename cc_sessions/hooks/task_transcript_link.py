@@ -2,7 +2,10 @@
 """Pre-tool-use hook to chunk transcript for subagents when Task tool is called."""
 from collections import deque
 from pathlib import Path
-import tiktoken
+try:
+    import tiktoken
+except Exception:
+    tiktoken = None
 import json
 import sys
 import os
@@ -28,17 +31,22 @@ if not transcript_path:
 with open(transcript_path, 'r') as f:
     transcript = [json.loads(line) for line in f]
 
+# Helpers to simplify nested conditions
+def _is_pre_work_entry(entry: dict) -> bool:
+    message = entry.get('message') or {}
+    content = message.get('content')
+    if not isinstance(content, list):
+        return False
+    return any(
+        block.get('type') == 'tool_use' and block.get('name') in ['Edit', 'MultiEdit', 'Write']
+        for block in content
+    )
+
+
 # Remove any pre-work transcript entries
-start_found = False
-while not start_found and transcript:
-    entry = transcript.pop(0)
-    message = entry.get('message')
-    if message:
-        content = message.get('content')
-        if isinstance(content, list):
-            for block in content:
-                if block.get('type') == 'tool_use' and block.get('name') in ['Edit', 'MultiEdit', 'Write']:
-                    start_found = True
+start_index = next((i for i, e in enumerate(transcript) if _is_pre_work_entry(e)), -1)
+if start_index != -1:
+    transcript = transcript[start_index + 1:]
 
 # Clean the transcript
 clean_transcript = deque()
@@ -55,13 +63,24 @@ for entry in transcript:
         }
         clean_transcript.append(clean_entry)
 
+def _extract_subagent_type(task_call: dict) -> str:
+    content = task_call.get('content', [])
+    return next(
+        (
+            (block.get('input') or {}).get('subagent_type', 'shared')
+            for block in content
+            if block.get('type') == 'tool_use' and block.get('name') == 'Task'
+        ),
+        'shared'
+    )
+
+
 # Route the transcript
-subagent_type = 'shared'
+if not clean_transcript:
+    sys.exit(0)
+
 task_call = clean_transcript[-1]
-for block in task_call.get('content'):
-    if block.get('type') == 'tool_use' and block.get('name') == 'Task':
-        task_input = block.get('input')
-        subagent_type = task_input.get('subagent_type')
+subagent_type = _extract_subagent_type(task_call)
 
 # Get project root using shared_state
 from shared_state import get_project_root
@@ -81,13 +100,18 @@ subagent_flag = PROJECT_ROOT / '.claude' / 'state' / 'in_subagent_context.flag'
 subagent_flag.touch()
 
 # Set up token counting
-enc = tiktoken.get_encoding('cl100k_base')
-def n_tokens(s: str) -> int:
-    return len(enc.encode(s))
+if tiktoken is not None:
+    enc = tiktoken.get_encoding('cl100k_base')
+    def n_tokens(s: str) -> int:
+        return len(enc.encode(s))
+else:
+    def n_tokens(s: str) -> int:
+        # Fallback approximation: ~4 chars per token
+        return max(1, len(s) // 4)
 
 # Save the transcript in chunks
 MAX_TOKENS_PER_BATCH = 18_000
-transcript_batch, batch_tokens, file_index = [], 0, 1             
+transcript_batch, batch_tokens, file_index = [], 0, 1
 
 while clean_transcript:
     entry = clean_transcript.popleft()

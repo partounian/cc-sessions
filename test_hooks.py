@@ -10,6 +10,98 @@ import tempfile
 from pathlib import Path
 
 
+def _make_temp_transcript(tmpdir: Path, include_prework: bool = True) -> Path:
+    transcript = []
+    if include_prework:
+        # Pre-work entries before first edit
+        transcript.append({
+            "type": "assistant",
+            "message": {
+                "role": "assistant",
+                "content": [
+                    {"type": "text", "text": "discussion"}
+                ]
+            }
+        })
+        transcript.append({
+            "type": "assistant",
+            "message": {
+                "role": "assistant",
+                "content": [
+                    {"type": "tool_use", "name": "Edit"}
+                ]
+            }
+        })
+    # Post-work entries including Task call
+    transcript.append({
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "please run task"}
+            ]
+        }
+    })
+    transcript.append({
+        "type": "assistant",
+        "message": {
+            "role": "assistant",
+            "content": [
+                {"type": "tool_use", "name": "Task", "input": {"subagent_type": "shared"}}
+            ]
+        }
+    })
+
+    path = tmpdir / "transcript.jsonl"
+    with path.open("w") as f:
+        for item in transcript:
+            f.write(json.dumps(item) + "\n")
+    return path
+
+
+def test_task_transcript_link():
+    """Test task_transcript_link.py with a temp transcript"""
+    print("Testing task_transcript_link.py...")
+
+    tmpdir = Path(tempfile.mkdtemp())
+    transcript_path = _make_temp_transcript(tmpdir)
+
+    test_input = {
+        "tool_name": "Task",
+        "transcript_path": str(transcript_path)
+    }
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "cc_sessions/hooks/task_transcript_link.py"],
+            input=json.dumps(test_input),
+            text=True,
+            capture_output=True,
+            timeout=15
+        )
+
+        if result.returncode != 0:
+            print(f"❌ task_transcript_link.py: FAIL (exit code {result.returncode})")
+            print(f"stderr: {result.stderr}")
+            return False
+
+        # Verify chunk files created under project .claude/state/shared
+        # Determine project root similar to hook's behavior
+        from cc_sessions.hooks.shared_state import get_project_root
+        project_root = get_project_root()
+        batch_dir = project_root / ".claude" / "state" / "shared"
+        files = list(batch_dir.glob("current_transcript_*.json"))
+        if files:
+            print("✅ task_transcript_link.py: PASS")
+            return True
+        else:
+            print("❌ task_transcript_link.py: FAIL (no transcript chunks found)")
+            return False
+
+    except Exception as e:
+        print(f"❌ task_transcript_link.py: ERROR - {e}")
+        return False
+
 def test_workflow_manager():
     """Test workflow manager hook with safe input"""
     print("Testing workflow-manager.py...")
@@ -22,7 +114,7 @@ def test_workflow_manager():
 
     try:
         result = subprocess.run(
-            [sys.executable, "cc_sessions/hooks/workflow_manager.py"],
+            [sys.executable, "cc_sessions/hooks/workflow-manager.py"],
             input=json.dumps(test_input),
             text=True,
             capture_output=True,
@@ -135,7 +227,8 @@ def main():
         test_workflow_manager,
         test_session_start,
         test_context_manager,
-        test_session_lifecycle
+        test_session_lifecycle,
+        test_task_transcript_link
     ]
 
     passed = 0
