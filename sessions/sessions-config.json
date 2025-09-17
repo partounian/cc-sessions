@@ -1,0 +1,23 @@
+{
+  "developer_name": "Patrick",
+  "trigger_phrases": ["make it so", "run that", "go ahead", "yert"],
+  "blocked_tools": ["Edit", "Write", "MultiEdit", "NotebookEdit"],
+  "task_detection": {
+    "enabled": true
+  },
+  "branch_enforcement": {
+    "enabled": false
+  },
+  "api_mode": false,
+  "workspace": {
+    "include_repositories": [
+      "Documents/code/kixie2",
+      "Documents/code/kixie-cloud",
+      "Documents/code/kixie-cdk",
+      "Documents/code/kixie-react",
+      "Documents/code/kixie-powercall",
+      "Documents/code/kixie-mono"
+    ],
+    "exclude_patterns": []
+  }
+}

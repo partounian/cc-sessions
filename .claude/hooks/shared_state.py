@@ -142,6 +142,25 @@ class EnhancedSharedState:
 
         return default_config
 
+    def _load_sessions_config(self) -> Dict[str, Any]:
+        """Load sessions configuration from sessions-config.json"""
+        sessions_config_file = self.project_root / "sessions" / "sessions-config.json"
+        
+        if sessions_config_file.exists():
+            try:
+                with open(sessions_config_file, 'r') as f:
+                    return json.load(f)
+            except Exception:
+                pass
+        
+        # Return default config if file doesn't exist or can't be loaded
+        return {
+            'workspace': {
+                'include_repositories': [],
+                'exclude_patterns': []
+            }
+        }
+
     def save_multi_repo_config(self) -> None:
         """Save multi-repository configuration to file"""
         self.multi_repo_config_file.parent.mkdir(parents=True, exist_ok=True)
@@ -175,15 +194,31 @@ class EnhancedSharedState:
         """Detect repositories in workspace, excluding cache and system directories"""
         repositories = []
 
-        # Directories to exclude from repository detection
-        excluded_patterns = [
+        # Load configuration from sessions-config.json
+        config = self._load_sessions_config()
+        include_repos = config.get('workspace', {}).get('include_repositories', [])
+        exclude_patterns = config.get('workspace', {}).get('exclude_patterns', [
             '.cache', 'cache', '__pycache__', 'node_modules', '.npm', '.yarn', '.pnpm',
             '.local', '.config', 'Library', 'AppData', '.vscode', '.idea', '.vs',
             'build', 'dist', '.uv', '.cargo', '.rustup', '.gem', '.pip',
             'lazy', 'checkpoints', 'globalStorage', 'Application Support'
-        ]
+        ])
 
-        # Use a more efficient approach - limit search depth and add early termination
+        # If specific repositories are included, only check those
+        if include_repos:
+            for repo_name in include_repos:
+                # Handle relative paths from workspace root
+                if not os.path.isabs(repo_name):
+                    repo_path = self.workspace_root / repo_name
+                else:
+                    repo_path = Path(repo_name)
+                
+                # Check if it's a valid git repository
+                if (repo_path / '.git').exists():
+                    repositories.append(repo_path)
+            return repositories
+
+        # Otherwise, auto-detect repositories
         max_repos = 10
         search_depth = 1  # Limit recursion depth
 
@@ -200,9 +235,11 @@ class EnhancedSharedState:
                         if item.name == '.git':
                             repo_path = item.parent
                             path_str = str(repo_path).lower()
-                            if not any(pattern.lower() in path_str for pattern in excluded_patterns):
+                            # Check if this path should be excluded
+                            should_exclude = any(pattern.lower() in path_str for pattern in exclude_patterns)
+                            if not should_exclude:
                                 repositories.append(repo_path)
-                        elif not item.name.startswith('.') and item.name not in excluded_patterns:
+                        elif not item.name.startswith('.') and item.name not in exclude_patterns:
                             _search_repos(item, depth + 1)
             except (PermissionError, OSError):
                 # Skip directories we can't access
