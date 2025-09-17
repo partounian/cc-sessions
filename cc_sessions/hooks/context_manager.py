@@ -96,13 +96,27 @@ class ContextManager:
             # Update compaction metadata
             self._update_compaction_metadata(context_manifest)
 
-            return {
+            result = {
                 'status': 'success',
                 'message': 'Context preserved successfully',
                 'timestamp': self._get_timestamp(),
                 'preserved_agents': len(agent_context.get('active_agents', [])),
                 'context_sources': len(context_manifest.get('priority_context', {}).get('critical_files', []))
             }
+
+            # Log compaction event
+            try:
+                self.shared_state.log_context_usage({
+                    'tokens_used': 0,
+                    'timestamp': self._get_timestamp(),
+                    'peak_usage': 0,
+                    'warning_triggered': False,
+                    'compaction_triggered': True
+                })
+            except Exception:
+                pass
+
+            return result
 
         except Exception as e:
             self._log_error(f"Error handling pre-compact: {e}")

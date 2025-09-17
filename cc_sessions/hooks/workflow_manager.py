@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 from shared_state import (check_daic_mode_bool, get_project_root,
-                          get_task_state, set_daic_mode)
+                          get_task_state, set_daic_mode, get_shared_state)
 
 # Load configuration from project's .claude directory
 PROJECT_ROOT = get_project_root()
@@ -134,6 +134,19 @@ def is_read_only_bash_command(command: str, config: dict) -> bool:
 
     return True
 
+
+def log_tool_event(tool_name: str, tool_input: dict, success: bool, reason: str | None = None) -> None:
+    try:
+        get_shared_state().log_tool_usage({
+            'tool_name': tool_name,
+            'success': bool(success),
+            'reason': reason,
+            'parameters': tool_input,
+            'timestamp': None
+        })
+    except Exception:
+        pass
+
 def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
     """Enforce branch consistency for file editing operations."""
     branch_config = config.get("branch_enforcement", DEFAULT_CONFIG["branch_enforcement"])
@@ -203,11 +216,19 @@ def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
                 # Scenario 2: Service is in task but on wrong branch
                 print(f"[Branch Mismatch] Service '{service_name}' is part of this task but is on branch '{current_branch}' instead of '{expected_branch}'.", file=sys.stderr)
                 print(f"Please run: cd {repo_path.relative_to(project_root)} && git checkout {expected_branch}", file=sys.stderr)
+                try:
+                    get_shared_state().log_workflow_event({'type': 'branch_mismatch', 'service': service_name, 'expected': expected_branch, 'actual': current_branch})
+                except Exception:
+                    pass
                 return False
             elif not in_task and branch_correct:
                 # Scenario 3: Service not in task but already on correct branch
                 print(f"[Service Not in Task] Service '{service_name}' is on the correct branch '{expected_branch}' but is not listed in the task file.", file=sys.stderr)
                 print(f"Please update the task file to include '{service_name}' in the services list.", file=sys.stderr)
+                try:
+                    get_shared_state().log_workflow_event({'type': 'service_not_in_task', 'service': service_name, 'branch': current_branch})
+                except Exception:
+                    pass
                 return False
             else:  # not in_task and not branch_correct
                 # Scenario 4: Service not in task AND on wrong branch
@@ -216,11 +237,19 @@ def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
                 print(f"  2. On branch '{current_branch}' instead of '{expected_branch}'", file=sys.stderr)
                 print(f"To fix: cd {repo_path.relative_to(project_root)} && git checkout -b {expected_branch}", file=sys.stderr)
                 print(f"Then update the task file to include '{service_name}' in the services list.", file=sys.stderr)
+                try:
+                    get_shared_state().log_workflow_event({'type': 'service_not_in_task_and_wrong_branch', 'service': service_name, 'expected': expected_branch, 'actual': current_branch})
+                except Exception:
+                    pass
                 return False
         else:
             # Single repo or main repo
             if current_branch != expected_branch:
                 print(f"[Branch Mismatch] Repository is on branch '{current_branch}' but task expects '{expected_branch}'. Please checkout the correct branch.", file=sys.stderr)
+                try:
+                    get_shared_state().log_workflow_event({'type': 'branch_mismatch', 'service': 'main', 'expected': expected_branch, 'actual': current_branch})
+                except Exception:
+                    pass
                 return False
 
     except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
@@ -305,6 +334,8 @@ def main():
         if is_post_tool_use:
             # Handle post-tool-use functionality
             mod = handle_post_tool_use(tool_name, tool_input, cwd)
+            # Log tool event as successful execution side-effect if not modified
+            log_tool_event(tool_name, tool_input, True)
             if mod:
                 sys.exit(2)  # Exit code 2 feeds stderr back to Claude
             else:
@@ -317,6 +348,7 @@ def main():
 
             if is_read_only_bash_command(command, config):
                 # Allow read-only commands without checks
+                log_tool_event(tool_name, tool_input, True)
                 sys.exit(0)
 
         # Check current mode
@@ -328,6 +360,7 @@ def main():
             if 'daic' in command:
                 print(f"[DAIC: Command Blocked] The 'daic' command is not allowed in discussion mode.", file=sys.stderr)
                 print(f"You're already in discussion mode. Be sure to propose your intended edits/plans to the user and seek their explicit approval, which will unlock implementation mode.", file=sys.stderr)
+                log_tool_event(tool_name, tool_input, False, reason='blocked_daic_command')
                 sys.exit(2)  # Block with feedback
 
         # Block configured tools in discussion mode (except task selection)
@@ -337,17 +370,21 @@ def main():
                 pass  # Allow task selection
             else:
                 print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
+                log_tool_event(tool_name, tool_input, False, reason='blocked_by_daic')
                 sys.exit(2)  # Block with feedback
 
         # Check subagent boundaries
         if not check_subagent_boundaries(tool_name, tool_input):
+            log_tool_event(tool_name, tool_input, False, reason='subagent_boundary')
             sys.exit(2)  # Block with feedback
 
         # Enforce branch consistency
         if not enforce_branch_consistency(tool_name, tool_input, config):
+            log_tool_event(tool_name, tool_input, False, reason='branch_enforcement')
             sys.exit(2)  # Block with feedback
 
         # Allow tool to proceed
+        log_tool_event(tool_name, tool_input, True)
         sys.exit(0)
 
     except json.JSONDecodeError as e:

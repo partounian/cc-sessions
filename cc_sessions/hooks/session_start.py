@@ -34,6 +34,12 @@ def initialize_session():
     # Get shared state instance
     shared_state = get_shared_state()
 
+    # Record session start time for duration/analytics
+    try:
+        shared_state.set_session_start_time()
+    except Exception:
+        pass
+
     # Get developer name from config
     try:
         CONFIG_FILE = get_project_root() / 'sessions' / 'sessions-config.json'
