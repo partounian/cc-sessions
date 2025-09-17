@@ -352,57 +352,7 @@ class SessionsInstaller:
         advanced = input(color("  Configure advanced options? (y/n): ", Colors.CYAN))
 
         if advanced.lower() == 'y':
-            # Tool blocking
-            print()
-            print(color("╭───────────────────────────────────────────────────────────────╮", Colors.CYAN))
-            print(color("│              Tool Blocking Configuration                      │", Colors.CYAN))
-            print(color("├───────────────────────────────────────────────────────────────┤", Colors.CYAN))
-            print(color("│   Tools can be blocked in discussion mode to enforce DAIC     │", Colors.DIM))
-            print(color("│   Default: Edit, Write, MultiEdit, NotebookEdit are blocked   │", Colors.DIM))
-            print(color("╰───────────────────────────────────────────────────────────────╯", Colors.CYAN))
-            print()
-
-            tools = [
-                ("Edit", "Edit existing files", True),
-                ("Write", "Create new files", True),
-                ("MultiEdit", "Multiple edits in one operation", True),
-                ("NotebookEdit", "Edit Jupyter notebooks", True),
-                ("Bash", "Run shell commands", False),
-                ("Read", "Read file contents", False),
-                ("Grep", "Search file contents", False),
-                ("Glob", "Find files by pattern", False),
-                ("LS", "List directory contents", False),
-                ("WebSearch", "Search the web", False),
-                ("WebFetch", "Fetch web content", False),
-                ("Task", "Launch specialized agents", False)
-            ]
-
-            print(color("  Available tools:", Colors.WHITE))
-            for i, (name, desc, blocked) in enumerate(tools, 1):
-                icon = "🔒" if blocked else "🔓"
-                status_color = Colors.YELLOW if blocked else Colors.GREEN
-                print(f"    {i:2}. {icon} {color(name.ljust(15), status_color)} - {desc}")
-            print()
-            print(color("  Hint: Edit tools are typically blocked to enforce discussion-first workflow", Colors.DIM))
-            print()
-
-            modify_tools = input(color("  Modify blocked tools list? (y/n): ", Colors.CYAN))
-
-            if modify_tools.lower() == 'y':
-                tool_numbers = input(color("  Enter comma-separated tool numbers to block: ", Colors.CYAN))
-                if tool_numbers:
-                    tool_names = [t[0] for t in tools]
-                    blocked_list = []
-                    for num_str in tool_numbers.split(','):
-                        try:
-                            num = int(num_str.strip())
-                            if 1 <= num <= len(tools):
-                                blocked_list.append(tool_names[num - 1])
-                        except ValueError:
-                            pass
-                    if blocked_list:
-                        self.config["blocked_tools"] = blocked_list
-                        print(color("  ✓ Tool blocking configuration saved", Colors.GREEN))
+            self._configure_tool_blocking()
 
             # Task prefix configuration
             print(color(f"\n\n★ TASK PREFIX CONFIGURATION", Colors.BRIGHT + Colors.MAGENTA))
@@ -428,6 +378,59 @@ class SessionsInstaller:
                 }
 
                 print(color("  ✓ Task prefixes updated", Colors.GREEN))
+
+    def _configure_tool_blocking(self) -> None:
+        """Configure tool blocking settings"""
+        print()
+        print(color("╭───────────────────────────────────────────────────────────────╮", Colors.CYAN))
+        print(color("│              Tool Blocking Configuration                      │", Colors.CYAN))
+        print(color("├───────────────────────────────────────────────────────────────┤", Colors.CYAN))
+        print(color("│   Tools can be blocked in discussion mode to enforce DAIC     │", Colors.DIM))
+        print(color("│   Default: Edit, Write, MultiEdit, NotebookEdit are blocked   │", Colors.DIM))
+        print(color("╰───────────────────────────────────────────────────────────────╯", Colors.CYAN))
+        print()
+
+        tools = [
+            ("Edit", "Edit existing files", True),
+            ("Write", "Create new files", True),
+            ("MultiEdit", "Multiple edits in one operation", True),
+            ("NotebookEdit", "Edit Jupyter notebooks", True),
+            ("Bash", "Run shell commands", False),
+            ("Read", "Read file contents", False),
+            ("Grep", "Search file contents", False),
+            ("Glob", "Find files by pattern", False),
+            ("LS", "List directory contents", False),
+            ("WebSearch", "Search the web", False),
+            ("WebFetch", "Fetch web content", False),
+            ("Task", "Launch specialized agents", False)
+        ]
+
+        print(color("  Available tools:", Colors.WHITE))
+        for i, (name, desc, blocked) in enumerate(tools, 1):
+            icon = "🔒" if blocked else "🔓"
+            status_color = Colors.YELLOW if blocked else Colors.GREEN
+            print(f"    {i:2}. {icon} {color(name.ljust(15), status_color)} - {desc}")
+        print()
+        print(color("  Hint: Edit tools are typically blocked to enforce discussion-first workflow", Colors.DIM))
+        print()
+
+        modify_tools = input(color("  Modify blocked tools list? (y/n): ", Colors.CYAN))
+
+        if modify_tools.lower() == 'y':
+            tool_numbers = input(color("  Enter comma-separated tool numbers to block: ", Colors.CYAN))
+            if tool_numbers:
+                tool_names = [t[0] for t in tools]
+                blocked_list = []
+                for num_str in tool_numbers.split(','):
+                    try:
+                        num = int(num_str.strip())
+                        if 1 <= num <= len(tools):
+                            blocked_list.append(tool_names[num - 1])
+                    except ValueError:
+                        pass
+                if blocked_list:
+                    self.config["blocked_tools"] = blocked_list
+                    print(color("  ✓ Tool blocking configuration saved", Colors.GREEN))
 
     def save_config(self) -> None:
         """Save configuration files"""
