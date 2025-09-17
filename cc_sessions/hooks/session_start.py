@@ -98,6 +98,11 @@ def initialize_session():
     if warning_90_flag.exists():
         warning_90_flag.unlink()
 
+    # 4b. Clear any lingering subagent context flag
+    subagent_flag = get_project_root() / '.claude' / 'state' / 'in_subagent_context.flag'
+    if subagent_flag.exists():
+        subagent_flag.unlink()
+
     # 5. Initialize workspace awareness
     workspace_context = initialize_workspace_awareness(shared_state)
 

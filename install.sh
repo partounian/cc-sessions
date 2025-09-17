@@ -408,7 +408,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py"
           }
         ]
       },
@@ -417,7 +417,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task_transcript_link.py"
           }
         ]
       }
@@ -428,7 +428,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py"
           }
         ]
       }

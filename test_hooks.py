@@ -104,7 +104,7 @@ def test_task_transcript_link():
 
 def test_workflow_manager():
     """Test workflow manager hook with safe input"""
-    print("Testing workflow-manager.py...")
+    print("Testing workflow_manager.py...")
 
     # Test with safe bash command
     test_input = {
@@ -114,7 +114,7 @@ def test_workflow_manager():
 
     try:
         result = subprocess.run(
-            [sys.executable, "cc_sessions/hooks/workflow-manager.py"],
+            [sys.executable, "cc_sessions/hooks/workflow_manager.py"],
             input=json.dumps(test_input),
             text=True,
             capture_output=True,
@@ -122,15 +122,15 @@ def test_workflow_manager():
         )
 
         if result.returncode == 0:
-            print("✅ workflow-manager.py: PASS")
+            print("✅ workflow_manager.py: PASS")
             return True
         else:
-            print(f"❌ workflow-manager.py: FAIL (exit code {result.returncode})")
+            print(f"❌ workflow_manager.py: FAIL (exit code {result.returncode})")
             print(f"stderr: {result.stderr}")
             return False
 
     except Exception as e:
-        print(f"❌ workflow-manager.py: ERROR - {e}")
+        print(f"❌ workflow_manager.py: ERROR - {e}")
         return False
 
 
@@ -161,7 +161,7 @@ def test_session_start():
 
 def test_context_manager():
     """Test context manager hook"""
-    print("Testing context-manager.py...")
+    print("Testing context_manager.py...")
 
     test_input = {
         "hookEventName": "PreCompact"
@@ -177,21 +177,21 @@ def test_context_manager():
         )
 
         if result.returncode == 0:
-            print("✅ context-manager.py: PASS")
+            print("✅ context_manager.py: PASS")
             return True
         else:
-            print(f"❌ context-manager.py: FAIL (exit code {result.returncode})")
+            print(f"❌ context_manager.py: FAIL (exit code {result.returncode})")
             print(f"stderr: {result.stderr}")
             return False
 
     except Exception as e:
-        print(f"❌ context-manager.py: ERROR - {e}")
+        print(f"❌ context_manager.py: ERROR - {e}")
         return False
 
 
 def test_session_lifecycle():
     """Test session lifecycle hook"""
-    print("Testing session-lifecycle.py...")
+    print("Testing session_lifecycle.py...")
 
     test_input = {
         "hookEventName": "Stop"
@@ -207,15 +207,15 @@ def test_session_lifecycle():
         )
 
         if result.returncode == 0:
-            print("✅ session-lifecycle.py: PASS")
+            print("✅ session_lifecycle.py: PASS")
             return True
         else:
-            print(f"❌ session-lifecycle.py: FAIL (exit code {result.returncode})")
+            print(f"❌ session_lifecycle.py: FAIL (exit code {result.returncode})")
             print(f"stderr: {result.stderr}")
             return False
 
     except Exception as e:
-        print(f"❌ session-lifecycle.py: ERROR - {e}")
+        print(f"❌ session_lifecycle.py: ERROR - {e}")
         return False
 
 

@@ -49,6 +49,11 @@ class SessionLifecycleManager:
     def handle_session_lifecycle(self, is_session_end: bool = False) -> bool:
         """Handle session lifecycle events (stop or end)"""
         try:
+            # Clear lingering subagent context flag at session stop/end
+            subagent_flag = Path('.claude/state/in_subagent_context.flag')
+            if subagent_flag.exists():
+                subagent_flag.unlink()
+
             # Collect session metrics
             self._collect_session_metrics()
 

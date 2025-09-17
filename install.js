@@ -658,7 +658,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow_manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py"
           }
         ]
       },
@@ -667,7 +667,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task_transcript_link.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/task_transcript_link.py"
           }
         ]
       }
@@ -678,7 +678,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow-manager.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow_manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py"
           }
         ]
       }

@@ -145,14 +145,14 @@ class EnhancedSharedState:
     def _load_sessions_config(self) -> Dict[str, Any]:
         """Load sessions configuration from sessions-config.json"""
         sessions_config_file = self.project_root / "sessions" / "sessions-config.json"
-        
+
         if sessions_config_file.exists():
             try:
                 with open(sessions_config_file, 'r') as f:
                     return json.load(f)
             except Exception:
                 pass
-        
+
         # Return default config if file doesn't exist or can't be loaded
         return {
             'workspace': {
@@ -197,12 +197,7 @@ class EnhancedSharedState:
         # Load configuration from sessions-config.json
         config = self._load_sessions_config()
         include_repos = config.get('workspace', {}).get('include_repositories', [])
-        exclude_patterns = config.get('workspace', {}).get('exclude_patterns', [
-            '.cache', 'cache', '__pycache__', 'node_modules', '.npm', '.yarn', '.pnpm',
-            '.local', '.config', 'Library', 'AppData', '.vscode', '.idea', '.vs',
-            'build', 'dist', '.uv', '.cargo', '.rustup', '.gem', '.pip',
-            'lazy', 'checkpoints', 'globalStorage', 'Application Support'
-        ])
+        exclude_patterns = config.get('workspace', {}).get('exclude_patterns', [])
 
         # If specific repositories are included, only check those
         if include_repos:
@@ -212,7 +207,7 @@ class EnhancedSharedState:
                     repo_path = self.workspace_root / repo_name
                 else:
                     repo_path = Path(repo_name)
-                
+
                 # Check if it's a valid git repository
                 if (repo_path / '.git').exists():
                     repositories.append(repo_path)
@@ -374,8 +369,8 @@ class EnhancedSharedState:
         """Get DAIC mode message for the given mode."""
         if mode == "discussion":
             return "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)"
-        else:
-            return "You are now in Implementation Mode and may use tools to execute the agreed upon actions - when you are done return immediately to Discussion Mode"
+
+        return "You are now in Implementation Mode and may use tools to execute the agreed upon actions - when you are done return immediately to Discussion Mode"
 
     # Task State Management
     def get_current_task(self) -> Dict[str, Any]:

@@ -469,7 +469,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow_manager.py\""
                         }
                     ]
                 },
@@ -478,7 +478,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task-transcript-link.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task-transcript-link.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/task_transcript_link.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\task_transcript_link.py\""
                         }
                     ]
                 }
@@ -489,7 +489,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow-manager.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/workflow_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\workflow_manager.py\""
                         }
                     ]
                 }
@@ -586,7 +586,6 @@ class SessionsInstaller:
             "context_manager.py",
         "shared_state.py",
         "session_start.py",
-            "pre_tool_use.py",
             "user_messages.py",
             "task_transcript_link.py"
         ]

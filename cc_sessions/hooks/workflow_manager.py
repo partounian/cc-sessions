@@ -89,20 +89,25 @@ def is_read_only_bash_command(command: str, config: dict) -> bool:
     """Check if a bash command is read-only."""
     # Check for write patterns
     write_patterns = [
-        r'>\s*[^>]',  # Output redirection
-        r'>>',         # Append redirection
-        r'\btee\b',    # tee command
-        r'\bmv\b',     # move/rename
-        r'\bcp\b',     # copy
-        r'\brm\b',     # remove
-        r'\bmkdir\b',  # make directory
-        r'\btouch\b',  # create/update file
-        r'\bsed\s+(?!-n)',  # sed without -n flag
-        r'\bnpm\s+install',  # npm install
-        r'\bpip\s+install',  # pip install
-        r'\bapt\s+install',  # apt install
-        r'\byum\s+install',  # yum install
-        r'\bbrew\s+install',  # brew install
+        r'>\s*\S',
+        r'>>\s*\S',
+        r'\btee\b',
+        r'\bmv\b',
+        r'\bcp\b',
+        r'\brm\b',
+        r'\bmkdir\b',
+        r'\btouch\b',
+        r'\bsed\s+-i',
+        r'curl\b.*(-o|--output)\b',
+        r'wget\b.*-O\b',
+        r'tar\s+-x',
+        r'unzip\s+-o',
+        r'dd\s+of=',
+        r'\bnpm\s+install',
+        r'\bpip\s+install',
+        r'\bapt\s+install',
+        r'\byum\s+install',
+        r'\bbrew\s+install',
     ]
 
     has_write_pattern = any(re.search(pattern, command) for pattern in write_patterns)
