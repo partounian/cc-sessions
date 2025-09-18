@@ -37,7 +37,7 @@ import stat
 import subprocess
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple, Union, NoReturn
 
 # Colors for terminal output
 class Colors:
@@ -59,11 +59,31 @@ class Colors:
     BGCYAN = '\033[46m'
 
 def color(text: str, color_code: str) -> str:
-    """Colorize text for terminal output"""
+    """
+    Colorize text for terminal output.
+
+    Args:
+        text: The text to be colorized
+        color_code: ANSI color code to apply to the text
+
+    Returns:
+        The colorized text with ANSI escape codes
+    """
     return f"{color_code}{text}{Colors.RESET}"
 
 def command_exists(command: str) -> bool:
-    """Check if a command exists in the system"""
+    """
+    Check if a command exists in the system PATH.
+
+    On Windows, checks for common executable extensions (.exe, .bat, .cmd).
+    On Unix-like systems, uses shutil.which() to check for the command.
+
+    Args:
+        command: The command name to check for (without extension)
+
+    Returns:
+        True if the command exists and is executable, False otherwise
+    """
     if os.name == 'nt':
         # Windows - try with common extensions
         for ext in ['', '.exe', '.bat', '.cmd']:
@@ -73,25 +93,65 @@ def command_exists(command: str) -> bool:
     return shutil.which(command) is not None
 
 def get_package_dir() -> Path:
-    """Get the directory where the package is installed"""
+    """
+    Get the directory where the cc_sessions package is installed.
+
+    This function dynamically determines the package installation directory
+    by examining the location of the cc_sessions module. All data files
+    (hooks, protocols, agents, etc.) are located within this directory.
+
+    Returns:
+        Path object pointing to the cc_sessions package directory
+    """
     import cc_sessions
     # All data files are now inside cc_sessions/
     return Path(cc_sessions.__file__).parent
 
 class SessionsInstaller:
-    def __init__(self):
-        self.package_dir = get_package_dir()
-        self.project_root = self.detect_project_directory()
-        self.config = {
+    """
+    Cross-platform installer for the Claude Code Sessions framework.
+
+    This class handles the complete installation process for the cc-sessions
+    package, including directory creation, file copying, configuration setup,
+    and integration with Claude Code's hook system.
+
+    Attributes:
+        package_dir (Path): Directory where the cc_sessions package is installed
+        project_root (Path): Target project directory for installation
+        config (Dict[str, Any]): Configuration dictionary for sessions setup
+        statusline_installed (bool): Whether statusline script was installed
+    """
+
+    def __init__(self) -> None:
+        """
+        Initialize the SessionsInstaller with default configuration.
+
+        Sets up the package directory, detects the project directory,
+        and initializes the default configuration for the sessions system.
+        """
+        self.package_dir: Path = get_package_dir()
+        self.project_root: Path = self.detect_project_directory()
+        self.config: Dict[str, Any] = {
             "developer_name": "the developer",
             "trigger_phrases": ["make it so", "run that", "go ahead", "yert"],
             "blocked_tools": ["Edit", "Write", "MultiEdit", "NotebookEdit"],
             "task_detection": {"enabled": True},
             "branch_enforcement": {"enabled": True}
         }
+        self.statusline_installed: bool = False
 
     def detect_project_directory(self) -> Path:
-        """Detect the correct project directory when running from pip/pipx"""
+        """
+        Detect the correct project directory when running from pip/pipx.
+
+        When the installer is run from a pip-installed package, it may be
+        executing from the site-packages directory rather than the user's
+        project directory. This method detects such cases and prompts the
+        user for the correct project path.
+
+        Returns:
+            Path object pointing to the target project directory
+        """
         current_dir = Path.cwd()
 
         # If running from site-packages or pipx environment
@@ -101,14 +161,23 @@ class SessionsInstaller:
             project_path = input("Enter the path to your project directory (or press Enter for current directory): ")
             if project_path:
                 return Path(project_path).resolve()
-            else:
-                # Default to user's current working directory before pip ran
-                return Path.cwd()
+
+            # Default to user's current working directory before pip ran
+            return Path.cwd()
 
         return current_dir
 
-    def check_dependencies(self) -> None:
-        """Check for required dependencies"""
+    def check_dependencies(self) -> NoReturn:
+        """
+        Check for required dependencies and system requirements.
+
+        Validates that the system meets the minimum requirements for
+        running the cc-sessions framework, including Python version,
+        pip availability, and optional Git installation.
+
+        Raises:
+            SystemExit: If critical dependencies are missing
+        """
         print(color("Checking dependencies...", Colors.CYAN))
 
         # Check Python version
@@ -129,10 +198,19 @@ class SessionsInstaller:
                 sys.exit(1)
 
     def create_directories(self) -> None:
-        """Create necessary directory structure"""
+        """
+        Create the necessary directory structure for the sessions framework.
+
+        Creates all required directories in the project root, including:
+        - .claude/ subdirectories for hooks, state, agents, and commands
+        - sessions/ subdirectories for tasks, protocols, and knowledge
+
+        All directories are created with parent=True and exist_ok=True
+        to handle nested structures and avoid errors if directories exist.
+        """
         print(color("Creating directory structure...", Colors.CYAN))
 
-        dirs = [
+        dirs: List[str] = [
             ".claude/hooks",
             ".claude/state",
             ".claude/agents",
@@ -147,99 +225,131 @@ class SessionsInstaller:
             (self.project_root / dir_path).mkdir(parents=True, exist_ok=True)
 
     def install_python_deps(self) -> None:
-        """Install Python dependencies"""
+        """
+        Install required Python dependencies.
+
+        Attempts to install the tiktoken package, which is required for
+        token counting functionality in the sessions framework. Uses pip3
+        if available, otherwise falls back to pip.
+
+        If installation fails, displays a warning but continues with
+        the installation process.
+        """
         print(color("Installing Python dependencies...", Colors.CYAN))
         try:
-            pip_cmd = "pip3" if command_exists("pip3") else "pip"
+            pip_cmd: str = "pip3" if command_exists("pip3") else "pip"
             subprocess.run([pip_cmd, "install", "tiktoken", "--quiet"],
                          capture_output=True, check=True)
         except subprocess.CalledProcessError:
             print(color("⚠️  Could not install tiktoken. You may need to install it manually.", Colors.YELLOW))
 
     def copy_files(self) -> None:
-        """Copy all necessary files to the project"""
+        """
+        Copy all necessary files from the package to the project directory.
+
+        Copies the following components:
+        - Python hook files (.py) to .claude/hooks/
+        - Protocol markdown files (.md) to sessions/protocols/
+        - Agent definition files (.md) to .claude/agents/
+        - Template files to sessions/tasks/
+        - Command files (.md) to .claude/commands/
+        - Knowledge base files to sessions/knowledge/
+
+        On Unix-like systems, hook files are made executable (755 permissions).
+        """
         # Copy hooks
         print(color("Installing hooks...", Colors.CYAN))
-        hooks_dir = self.package_dir / "hooks"
+        hooks_dir: Path = self.package_dir / "hooks"
         if hooks_dir.exists():
             for hook_file in hooks_dir.glob("*.py"):
-                dest = self.project_root / ".claude/hooks" / hook_file.name
+                dest: Path = self.project_root / ".claude/hooks" / hook_file.name
                 shutil.copy2(hook_file, dest)
                 if os.name != 'nt':
                     dest.chmod(0o755)
 
         # Copy protocols
         print(color("Installing protocols...", Colors.CYAN))
-        protocols_dir = self.package_dir / "protocols"
+        protocols_dir: Path = self.package_dir / "protocols"
         if protocols_dir.exists():
             for protocol_file in protocols_dir.glob("*.md"):
-                dest = self.project_root / "sessions/protocols" / protocol_file.name
+                dest: Path = self.project_root / "sessions/protocols" / protocol_file.name
                 shutil.copy2(protocol_file, dest)
 
         # Copy agents
         print(color("Installing agent definitions...", Colors.CYAN))
-        agents_dir = self.package_dir / "agents"
+        agents_dir: Path = self.package_dir / "agents"
         if agents_dir.exists():
             for agent_file in agents_dir.glob("*.md"):
-                dest = self.project_root / ".claude/agents" / agent_file.name
+                dest: Path = self.project_root / ".claude/agents" / agent_file.name
                 shutil.copy2(agent_file, dest)
 
         # Copy templates
         print(color("Installing templates...", Colors.CYAN))
-        template_file = self.package_dir / "templates/TEMPLATE.md"
+        template_file: Path = self.package_dir / "templates/TEMPLATE.md"
         if template_file.exists():
-            dest = self.project_root / "sessions/tasks/TEMPLATE.md"
+            dest: Path = self.project_root / "sessions/tasks/TEMPLATE.md"
             shutil.copy2(template_file, dest)
 
         # Copy commands
         print(color("Installing commands...", Colors.CYAN))
-        commands_dir = self.package_dir / "commands"
+        commands_dir: Path = self.package_dir / "commands"
         if commands_dir.exists():
             for command_file in commands_dir.glob("*.md"):
-                dest = self.project_root / ".claude/commands" / command_file.name
+                dest: Path = self.project_root / ".claude/commands" / command_file.name
                 shutil.copy2(command_file, dest)
 
         # Copy knowledge files
-        knowledge_dir = self.package_dir / "knowledge/claude-code"
+        knowledge_dir: Path = self.package_dir / "knowledge/claude-code"
         if knowledge_dir.exists():
             print(color("Installing Claude Code knowledge base...", Colors.CYAN))
-            dest_dir = self.project_root / "sessions/knowledge/claude-code"
+            dest_dir: Path = self.project_root / "sessions/knowledge/claude-code"
             if dest_dir.exists():
                 shutil.rmtree(dest_dir)
             shutil.copytree(knowledge_dir, dest_dir)
 
     def install_daic_command(self) -> None:
-        """Install the daic command globally"""
+        """
+        Install the daic command globally for cross-platform use.
+
+        On Windows:
+        - Installs both .cmd and .ps1 versions to user's local AppData directory
+        - Provides instructions for adding the directory to PATH
+
+        On Unix/Mac:
+        - Installs the bash script to /usr/local/bin/daic
+        - Attempts to use sudo if permission is denied
+        - Makes the script executable (755 permissions)
+        """
         print(color("Installing daic command...", Colors.CYAN))
 
         if os.name == 'nt':  # Windows
             # Install Windows scripts (.cmd and .ps1)
-            daic_cmd_source = self.package_dir / "scripts/daic.cmd"
-            daic_ps1_source = self.package_dir / "scripts/daic.ps1"
+            daic_cmd_source: Path = self.package_dir / "scripts/daic.cmd"
+            daic_ps1_source: Path = self.package_dir / "scripts/daic.ps1"
 
             # Try to install to user's local directory
-            local_bin = Path.home() / "AppData" / "Local" / "cc-sessions" / "bin"
+            local_bin: Path = Path.home() / "AppData" / "Local" / "cc-sessions" / "bin"
             local_bin.mkdir(parents=True, exist_ok=True)
 
             if daic_cmd_source.exists():
-                daic_cmd_dest = local_bin / "daic.cmd"
+                daic_cmd_dest: Path = local_bin / "daic.cmd"
                 shutil.copy2(daic_cmd_source, daic_cmd_dest)
                 print(color(f"  ✓ Installed daic.cmd to {local_bin}", Colors.GREEN))
 
             if daic_ps1_source.exists():
-                daic_ps1_dest = local_bin / "daic.ps1"
+                daic_ps1_dest: Path = local_bin / "daic.ps1"
                 shutil.copy2(daic_ps1_source, daic_ps1_dest)
                 print(color(f"  ✓ Installed daic.ps1 to {local_bin}", Colors.GREEN))
 
             print(color(f"  ℹ Add {local_bin} to your PATH to use 'daic' command", Colors.YELLOW))
         else:
             # Unix/Mac installation
-            daic_source = self.package_dir / "scripts/daic"
+            daic_source: Path = self.package_dir / "scripts/daic"
             if not daic_source.exists():
                 print(color("⚠️  daic script not found in package.", Colors.YELLOW))
                 return
 
-            daic_dest = Path("/usr/local/bin/daic")
+            daic_dest: Path = Path("/usr/local/bin/daic")
 
             try:
                 shutil.copy2(daic_source, daic_dest)
@@ -253,7 +363,19 @@ class SessionsInstaller:
                     print(color("⚠️  Could not install daic command globally.", Colors.YELLOW))
 
     def configure(self) -> None:
-        """Interactive configuration"""
+        """
+        Interactive configuration setup for the sessions framework.
+
+        Guides the user through configuring:
+        - Developer identity and name
+        - Statusline installation for real-time status display
+        - DAIC trigger phrases for workflow control
+        - API mode settings for token management
+        - Advanced options including tool blocking and task prefixes
+
+        All configuration is stored in the self.config dictionary and
+        saved to sessions-config.json during the save_config step.
+        """
         print()
         print(color("╔═══════════════════════════════════════════════════════════════╗", Colors.BRIGHT + Colors.CYAN))
         print(color("║                    CONFIGURATION SETUP                        ║", Colors.BRIGHT + Colors.CYAN))
@@ -268,7 +390,7 @@ class SessionsInstaller:
         print(color("  Claude will use this name when addressing you in sessions", Colors.DIM))
         print()
 
-        name = input(color("  Your name: ", Colors.CYAN))
+        name: str = input(color("  Your name: ", Colors.CYAN))
         if name:
             self.config["developer_name"] = name
             print(color(f"  ✓ Hello, {name}!", Colors.GREEN))
@@ -283,13 +405,13 @@ class SessionsInstaller:
         print(color("    • Open task count", Colors.CYAN))
         print()
 
-        install_statusline = input(color("  Install statusline? (y/n): ", Colors.CYAN))
+        install_statusline: str = input(color("  Install statusline? (y/n): ", Colors.CYAN))
 
         if install_statusline.lower() == 'y':
-            statusline_source = self.package_dir / "scripts/statusline-script.sh"
+            statusline_source: Path = self.package_dir / "scripts/statusline-script.sh"
             if statusline_source.exists():
                 print(color("  Installing statusline script...", Colors.DIM))
-                statusline_dest = self.project_root / ".claude/statusline-script.sh"
+                statusline_dest: Path = self.project_root / ".claude/statusline-script.sh"
                 shutil.copy2(statusline_source, statusline_dest)
                 statusline_dest.chmod(0o755)
                 self.statusline_installed = True
@@ -312,7 +434,7 @@ class SessionsInstaller:
 
         # Allow adding multiple custom trigger phrases
         while True:
-            custom_trigger = input(color("  Add custom trigger phrase (Enter to skip): ", Colors.CYAN))
+            custom_trigger: str = input(color("  Add custom trigger phrase (Enter to skip): ", Colors.CYAN))
             if not custom_trigger:
                 break
             self.config["trigger_phrases"].append(custom_trigger)
@@ -335,7 +457,7 @@ class SessionsInstaller:
         print(color("  You can toggle this anytime with: /api-mode", Colors.DIM))
         print()
 
-        enable_ultrathink = input(color("  Enable automatic ultrathink for best performance? (y/n): ", Colors.CYAN))
+        enable_ultrathink: str = input(color("  Enable automatic ultrathink for best performance? (y/n): ", Colors.CYAN))
         if enable_ultrathink.lower() == 'y':
             self.config["api_mode"] = False
             print(color("  ✓ Max mode - ultrathink enabled for best performance", Colors.GREEN))
@@ -349,7 +471,7 @@ class SessionsInstaller:
         print(color("  Configure tool blocking, task prefixes, and more", Colors.WHITE))
         print()
 
-        advanced = input(color("  Configure advanced options? (y/n): ", Colors.CYAN))
+        advanced: str = input(color("  Configure advanced options? (y/n): ", Colors.CYAN))
 
         if advanced.lower() == 'y':
             self._configure_tool_blocking()
@@ -366,12 +488,12 @@ class SessionsInstaller:
             print(color("    → ?- (investigate/research)", Colors.WHITE))
             print()
 
-            customize_prefixes = input(color("  Customize task prefixes? (y/n): ", Colors.CYAN))
+            customize_prefixes: str = input(color("  Customize task prefixes? (y/n): ", Colors.CYAN))
             if customize_prefixes.lower() == 'y':
-                high = input(color("  High priority prefix [h-]: ", Colors.CYAN)) or 'h-'
-                med = input(color("  Medium priority prefix [m-]: ", Colors.CYAN)) or 'm-'
-                low = input(color("  Low priority prefix [l-]: ", Colors.CYAN)) or 'l-'
-                inv = input(color("  Investigate prefix [?-]: ", Colors.CYAN)) or '?-'
+                high: str = input(color("  High priority prefix [h-]: ", Colors.CYAN)) or 'h-'
+                med: str = input(color("  Medium priority prefix [m-]: ", Colors.CYAN)) or 'm-'
+                low: str = input(color("  Low priority prefix [l-]: ", Colors.CYAN)) or 'l-'
+                inv: str = input(color("  Investigate prefix [?-]: ", Colors.CYAN)) or '?-'
 
                 self.config["task_prefixes"] = {
                     "priority": [high, med, low, inv]
@@ -380,7 +502,13 @@ class SessionsInstaller:
                 print(color("  ✓ Task prefixes updated", Colors.GREEN))
 
     def _configure_tool_blocking(self) -> None:
-        """Configure tool blocking settings"""
+        """
+        Configure tool blocking settings for the DAIC workflow.
+
+        Allows users to customize which tools are blocked during discussion
+        mode to enforce the "Discuss, Analyze, Implement, Check" workflow.
+        By default, editing tools are blocked to encourage discussion first.
+        """
         print()
         print(color("╭───────────────────────────────────────────────────────────────╮", Colors.CYAN))
         print(color("│              Tool Blocking Configuration                      │", Colors.CYAN))
@@ -390,7 +518,7 @@ class SessionsInstaller:
         print(color("╰───────────────────────────────────────────────────────────────╯", Colors.CYAN))
         print()
 
-        tools = [
+        tools: List[Tuple[str, str, bool]] = [
             ("Edit", "Edit existing files", True),
             ("Write", "Create new files", True),
             ("MultiEdit", "Multiple edits in one operation", True),
@@ -407,55 +535,66 @@ class SessionsInstaller:
 
         print(color("  Available tools:", Colors.WHITE))
         for i, (name, desc, blocked) in enumerate(tools, 1):
-            icon = "🔒" if blocked else "🔓"
-            status_color = Colors.YELLOW if blocked else Colors.GREEN
+            icon: str = "🔒" if blocked else "🔓"
+            status_color: str = Colors.YELLOW if blocked else Colors.GREEN
             print(f"    {i:2}. {icon} {color(name.ljust(15), status_color)} - {desc}")
         print()
         print(color("  Hint: Edit tools are typically blocked to enforce discussion-first workflow", Colors.DIM))
         print()
 
-        modify_tools = input(color("  Modify blocked tools list? (y/n): ", Colors.CYAN))
+        modify_tools: str = input(color("  Modify blocked tools list? (y/n): ", Colors.CYAN))
 
         if modify_tools.lower() == 'y':
-            tool_numbers = input(color("  Enter comma-separated tool numbers to block: ", Colors.CYAN))
+            tool_numbers: str = input(color("  Enter comma-separated tool numbers to block: ", Colors.CYAN))
             if tool_numbers:
-                tool_names = [t[0] for t in tools]
-                blocked_list = []
+                tool_names: List[str] = [t[0] for t in tools]
+                blocked_list: List[str] = []
                 for num_str in tool_numbers.split(','):
                     try:
-                        num = int(num_str.strip())
+                        num: int = int(num_str.strip())
                         if 1 <= num <= len(tools):
                             blocked_list.append(tool_names[num - 1])
                     except ValueError:
-                        pass
+                        # Skip invalid numbers (non-numeric input)
+                        continue
                 if blocked_list:
                     self.config["blocked_tools"] = blocked_list
                     print(color("  ✓ Tool blocking configuration saved", Colors.GREEN))
 
     def save_config(self) -> None:
-        """Save configuration files"""
+        """
+        Save all configuration files for the sessions framework.
+
+        Creates and saves:
+        - sessions-config.json with user preferences and settings
+        - .claude/settings.json with hook configurations for Claude Code
+        - DAIC state files for workflow management
+        - Task state files for current task tracking
+
+        Also validates that all required hook files are properly installed.
+        """
         print(color("Creating configuration...", Colors.CYAN))
 
         # Save sessions config
-        config_file = self.project_root / "sessions/sessions-config.json"
+        config_file: Path = self.project_root / "sessions/sessions-config.json"
         config_file.write_text(json.dumps(self.config, indent=2))
 
         # Create or update .claude/settings.json with all hooks
         print(color("Configuring hooks in settings.json...", Colors.CYAN))
-        settings_file = self.project_root / ".claude/settings.json"
+        settings_file: Path = self.project_root / ".claude/settings.json"
 
-        settings = {}
+        settings: Dict[str, Any] = {}
         if settings_file.exists():
             print(color("Found existing settings.json, merging sessions hooks...", Colors.CYAN))
             try:
                 settings = json.loads(settings_file.read_text())
-            except:
+            except (json.JSONDecodeError, FileNotFoundError, PermissionError):
                 settings = {}
         else:
             print(color("Creating new settings.json with sessions hooks...", Colors.CYAN))
 
         # Define the consolidated sessions hooks
-        sessions_hooks = {
+        sessions_hooks: Dict[str, List[Dict[str, Any]]] = {
             "UserPromptSubmit": [
                 {
                     "hooks": [
@@ -568,12 +707,12 @@ class SessionsInstaller:
         self.validate_hook_installation()
 
         # Initialize DAIC state
-        daic_state = self.project_root / ".claude/state/daic-mode.json"
+        daic_state: Path = self.project_root / ".claude/state/daic-mode.json"
         daic_state.write_text(json.dumps({"mode": "discussion"}, indent=2))
 
         # Create initial task state
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        task_state = self.project_root / ".claude/state/current_task.json"
+        current_date: str = datetime.now().strftime("%Y-%m-%d")
+        task_state: Path = self.project_root / ".claude/state/current_task.json"
         task_state.write_text(json.dumps({
             "task": None,
             "branch": None,
@@ -582,22 +721,27 @@ class SessionsInstaller:
         }, indent=2))
 
     def validate_hook_installation(self) -> None:
-        """Validate that all hook files are properly installed"""
-        required_hooks = [
+        """
+        Validate that all required hook files are properly installed.
+
+        Checks for the presence of all essential hook files in the
+        .claude/hooks directory and reports any missing files.
+        """
+        required_hooks: List[str] = [
             "workflow_manager.py",
             "session_lifecycle.py",
             "context_manager.py",
-        "shared_state.py",
-        "session_start.py",
+            "shared_state.py",
+            "session_start.py",
             "user_messages.py",
             "task_transcript_link.py"
         ]
 
-        hooks_dir = self.project_root / ".claude/hooks"
-        missing_hooks = []
+        hooks_dir: Path = self.project_root / ".claude/hooks"
+        missing_hooks: List[str] = []
 
         for hook in required_hooks:
-            hook_path = hooks_dir / hook
+            hook_path: Path = hooks_dir / hook
             if not hook_path.exists():
                 missing_hooks.append(hook)
 
@@ -607,21 +751,29 @@ class SessionsInstaller:
             print(color("✓ All hook files validated", Colors.GREEN))
 
     def validate_installation(self) -> bool:
-        """Validate the complete installation"""
-        issues = []
+        """
+        Validate the complete installation by checking all required components.
+
+        Verifies that all essential directories and configuration files
+        have been created and are accessible.
+
+        Returns:
+            True if installation is valid, False if issues are found
+        """
+        issues: List[str] = []
 
         # Check hook files
-        hooks_dir = self.project_root / ".claude/hooks"
+        hooks_dir: Path = self.project_root / ".claude/hooks"
         if not hooks_dir.exists():
             issues.append("Hooks directory missing")
 
         # Check state directory
-        state_dir = self.project_root / ".claude/state"
+        state_dir: Path = self.project_root / ".claude/state"
         if not state_dir.exists():
             issues.append("State directory missing")
 
         # Check sessions config
-        sessions_config = self.project_root / "sessions/sessions-config.json"
+        sessions_config: Path = self.project_root / "sessions/sessions-config.json"
         if not sessions_config.exists():
             issues.append("Sessions configuration missing")
 
@@ -632,7 +784,15 @@ class SessionsInstaller:
         return True
 
     def setup_claude_md(self) -> None:
-        """Set up CLAUDE.md integration"""
+        """
+        Set up CLAUDE.md integration for the sessions framework.
+
+        Handles integration with existing CLAUDE.md files by either:
+        - Adding sessions include to existing CLAUDE.md if found
+        - Creating new CLAUDE.md with sessions behaviors if none exists
+
+        Preserves existing project-specific rules while adding sessions functionality.
+        """
         print()
         print(color("═══════════════════════════════════════════", Colors.BRIGHT))
         print(color("         CLAUDE.md Integration", Colors.BRIGHT))
@@ -640,8 +800,8 @@ class SessionsInstaller:
         print()
 
         # Check for existing CLAUDE.md
-        sessions_md = self.package_dir / "templates/CLAUDE.sessions.md"
-        claude_md = self.project_root / "CLAUDE.md"
+        sessions_md: Path = self.package_dir / "templates/CLAUDE.sessions.md"
+        claude_md: Path = self.project_root / "CLAUDE.md"
 
         if claude_md.exists():
             # File exists, preserve it and add sessions as separate file
@@ -649,15 +809,15 @@ class SessionsInstaller:
 
             # Copy CLAUDE.sessions.md as separate file
             if sessions_md.exists():
-                dest = self.project_root / "CLAUDE.sessions.md"
+                dest: Path = self.project_root / "CLAUDE.sessions.md"
                 shutil.copy2(sessions_md, dest)
 
             # Check if it already includes sessions
-            content = claude_md.read_text()
+            content: str = claude_md.read_text()
             if "@CLAUDE.sessions.md" not in content:
                 print(color("Adding sessions include to existing CLAUDE.md...", Colors.CYAN))
 
-                addition = "\n## Sessions System Behaviors\n\n@CLAUDE.sessions.md\n"
+                addition: str = "\n## Sessions System Behaviors\n\n@CLAUDE.sessions.md\n"
                 with claude_md.open("a") as f:
                     f.write(addition)
 
@@ -672,7 +832,21 @@ class SessionsInstaller:
                 print(color("✅ CLAUDE.md created with complete sessions behaviors", Colors.GREEN))
 
     def run(self) -> None:
-        """Run the full installation process"""
+        """
+        Run the complete installation process for the sessions framework.
+
+        Executes all installation steps in sequence:
+        1. Check system dependencies and requirements
+        2. Create necessary directory structure
+        3. Install Python dependencies
+        4. Copy all framework files
+        5. Install daic command globally
+        6. Run interactive configuration
+        7. Save all configuration files
+        8. Set up CLAUDE.md integration
+
+        Handles errors gracefully and provides detailed feedback throughout.
+        """
         print(color("╔════════════════════════════════════════════╗", Colors.BRIGHT))
         print(color("║            cc-sessions Installer           ║", Colors.BRIGHT))
         print(color("╚════════════════════════════════════════════╝", Colors.BRIGHT))
@@ -748,13 +922,23 @@ class SessionsInstaller:
             print(color(f"❌ Installation failed: {e}", Colors.RED))
             sys.exit(1)
 
-def main():
-    """Main entry point for the installer"""
-    installer = SessionsInstaller()
+def main() -> None:
+    """
+    Main entry point for the installer.
+
+    Creates a new SessionsInstaller instance and runs the complete
+    installation process.
+    """
+    installer: SessionsInstaller = SessionsInstaller()
     installer.run()
 
-def install():
-    """Alias for main() for compatibility"""
+def install() -> None:
+    """
+    Alias for main() for compatibility.
+
+    Provides an alternative entry point for the installer that can be
+    called from other modules or scripts.
+    """
     main()
 
 if __name__ == "__main__":

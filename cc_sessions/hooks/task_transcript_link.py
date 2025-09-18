@@ -86,9 +86,29 @@ subagent_type = _extract_subagent_type(task_call)
 from shared_state import get_project_root
 PROJECT_ROOT = get_project_root()
 
+
+def cleanup_old_transcript_chunks(batch_dir: Path) -> None:
+    """Simple cleanup: keep only last 20 chunks per subagent type"""
+    if not batch_dir.exists():
+        return
+
+    chunk_files = sorted(batch_dir.glob("current_transcript_*.json"),
+                        key=lambda f: f.stat().st_mtime, reverse=True)
+
+    # Keep only last 20 chunks, delete the rest
+    for old_chunk in chunk_files[20:]:
+        try:
+            old_chunk.unlink()
+        except Exception:
+            pass  # Silent failure, don't break the workflow
+
 # Clear the current transcript directory
 BATCH_DIR = PROJECT_ROOT / '.claude' / 'state' / subagent_type
 BATCH_DIR.mkdir(parents=True, exist_ok=True)
+
+# Clean up old transcript chunks before creating new ones
+cleanup_old_transcript_chunks(BATCH_DIR)
+
 target_dir = BATCH_DIR
 for item in target_dir.iterdir():
     if item.is_file():
@@ -131,6 +151,9 @@ if transcript_batch:
     file_path = BATCH_DIR / f'current_transcript_{file_index:03}.json'
     with file_path.open('w') as f:
         json.dump(transcript_batch, f, indent=2, ensure_ascii=False)
+
+# Clean up old chunks again after creating new ones
+cleanup_old_transcript_chunks(BATCH_DIR)
 
 # Allow the tool call to proceed
 sys.exit(0)

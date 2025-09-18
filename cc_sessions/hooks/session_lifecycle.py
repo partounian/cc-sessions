@@ -66,6 +66,9 @@ class SessionLifecycleManager:
             # Clean up agent contexts
             self._cleanup_agent_contexts()
 
+            # Trigger garbage collection for memory management
+            self._trigger_memory_cleanup()
+
             if is_session_end:
                 # Additional end-of-session processing
                 self._persist_final_state()
@@ -658,7 +661,7 @@ class SessionLifecycleManager:
             self._log_error(f"Error updating aggregate metrics: {e}")
 
     def _cleanup_agent_contexts(self) -> None:
-        """Clean up temporary agent context files"""
+        """Enhanced agent context cleanup with better memory management"""
         try:
             agent_context_dir = Path('.claude/state/agent_context')
             if agent_context_dir.exists():
@@ -668,16 +671,59 @@ class SessionLifecycleManager:
                         for temp_file in agent_type_dir.glob('temp_*'):
                             temp_file.unlink()
 
-                        # Clean up old chunk files (keep only recent ones)
-                        chunk_files = sorted(agent_type_dir.glob('chunk_*.json'))
-                        if len(chunk_files) > 10:  # Keep only 10 most recent chunks
-                            for old_chunk in chunk_files[:-10]:
+                        # Enhanced chunk cleanup: keep last 10, delete older
+                        chunk_files = sorted(agent_type_dir.glob('chunk_*.json'),
+                                           key=lambda f: f.stat().st_mtime, reverse=True)
+                        for old_chunk in chunk_files[10:]:  # Keep last 10
+                            try:
                                 old_chunk.unlink()
+                            except Exception:
+                                pass  # Silent failure
+
+                        # Clean up old session data (older than 7 days)
+                        self._cleanup_old_session_data(agent_type_dir)
 
             self._log_info("Agent context cleanup completed")
 
         except Exception as e:
             self._log_error(f"Error cleaning up agent contexts: {e}")
+
+    def _cleanup_old_session_data(self, agent_dir: Path) -> None:
+        """Clean up agent data older than 7 days"""
+        try:
+            import time
+            cutoff_time = time.time() - (7 * 24 * 60 * 60)  # 7 days ago
+            for file_path in agent_dir.glob('*'):
+                if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
+                    try:
+                        file_path.unlink()
+                    except Exception:
+                        pass  # Silent failure
+        except Exception:
+            pass  # Silent failure
+
+    def _trigger_memory_cleanup(self) -> None:
+        """Trigger memory cleanup and garbage collection"""
+        try:
+            import gc
+
+            # Log memory usage before cleanup
+            memory_before = self.shared_state.get_memory_usage()
+            self._log_info(f"Memory before cleanup: {memory_before.get('rss_mb', 0):.1f}MB")
+
+            # Trigger garbage collection
+            gc_stats = self.shared_state.trigger_garbage_collection()
+            self._log_info(f"Garbage collection: {gc_stats.get('collected_objects', 0)} objects collected")
+
+            # Log memory usage after cleanup
+            memory_after = self.shared_state.get_memory_usage()
+            self._log_info(f"Memory after cleanup: {memory_after.get('rss_mb', 0):.1f}MB")
+
+            # Log memory usage for monitoring
+            self.shared_state.log_memory_usage()
+
+        except Exception as e:
+            self._log_error(f"Error in memory cleanup: {e}")
 
     def _persist_final_state(self) -> None:
         """Persist final state to ensure no data loss"""

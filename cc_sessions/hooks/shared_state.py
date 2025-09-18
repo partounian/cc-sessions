@@ -22,9 +22,16 @@ Key features:
 import json
 import os
 import sys
+import gc
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 
 
 class EnhancedSharedState:
@@ -191,7 +198,7 @@ class EnhancedSharedState:
         return {k: v for k, v in self.multi_repo_config['repositories'].items() if v.get('active', True)}
 
     def detect_workspace_repositories(self) -> List[Path]:
-        """Detect repositories in workspace, excluding cache and system directories"""
+        """Detect repositories in workspace with optimized memory usage"""
         repositories = []
 
         # Load configuration from sessions-config.json
@@ -213,15 +220,17 @@ class EnhancedSharedState:
                     repositories.append(repo_path)
             return repositories
 
-        # Otherwise, auto-detect repositories
+        # Otherwise, auto-detect repositories with memory optimization
         max_repos = 10
         search_depth = 1  # Limit recursion depth
 
-        def _search_repos(path: Path, depth: int = 0) -> None:
+        def _search_repos_optimized(path: Path, depth: int = 0) -> None:
+            """Optimized repository search that doesn't accumulate memory"""
             if depth > search_depth or len(repositories) >= max_repos:
                 return
 
             try:
+                # Use iterator to avoid loading all directory entries at once
                 for item in path.iterdir():
                     if len(repositories) >= max_repos:
                         break
@@ -234,21 +243,27 @@ class EnhancedSharedState:
                             should_exclude = any(pattern.lower() in path_str for pattern in exclude_patterns)
                             if not should_exclude:
                                 repositories.append(repo_path)
-                        elif not item.name.startswith('.') and item.name not in exclude_patterns:
-                            _search_repos(item, depth + 1)
+                                # Early return if we have enough repositories
+                                if len(repositories) >= max_repos:
+                                    return
+                        elif (not item.name.startswith('.') and
+                              item.name not in exclude_patterns and
+                              item.name not in ['node_modules', '__pycache__', '.venv', 'venv', 'build', 'dist']):
+                            _search_repos_optimized(item, depth + 1)
             except (PermissionError, OSError):
                 # Skip directories we can't access
                 pass
 
-        _search_repos(self.workspace_root)
+        _search_repos_optimized(self.workspace_root)
 
-        # Sort by modification time (most recent first)
-        try:
-            repositories.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-        except OSError:
-            pass  # If we can't stat files, keep original order
+        # Sort by modification time (most recent first) - only if we have repositories
+        if repositories:
+            try:
+                repositories.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            except OSError:
+                pass  # If we can't stat files, keep original order
 
-        return repositories[:10]  # Ensure we never return more than 10 repositories
+        return repositories[:max_repos]  # Ensure we never return more than max_repos
 
     def setup_workspace_awareness(self) -> Dict[str, Any]:
         """Set up workspace awareness for cc-sessions"""
@@ -543,28 +558,46 @@ class EnhancedSharedState:
         self._append_to_log_file(self.workflow_events_file, event)
 
     def _append_to_log_file(self, log_file: Path, entry: Dict[str, Any]) -> None:
-        """Append entry to log file"""
+        """Append entry to log file using streaming approach to prevent memory accumulation"""
         try:
-            # Load existing log entries
-            if log_file.exists():
-                with open(log_file, 'r') as f:
-                    log_entries = json.load(f)
-            else:
-                log_entries = []
-
-            # Add new entry
-            log_entries.append(entry)
-
-            # Keep only last 1000 entries to prevent file from growing too large
-            if len(log_entries) > 1000:
-                log_entries = log_entries[-1000:]
-
-            # Save updated log
-            with open(log_file, 'w') as f:
-                json.dump(log_entries, f, indent=2)
-
+            # Use streaming append to avoid loading entire file into memory
+            self._append_to_log_file_streaming(log_file, entry)
         except Exception as e:
             print(f"Error logging to {log_file}: {e}", file=sys.stderr)
+
+    def _append_to_log_file_streaming(self, log_file: Path, entry: Dict[str, Any]) -> None:
+        """Streaming log append - no memory accumulation"""
+        try:
+            # Append directly to file, no memory loading
+            with open(log_file, 'a') as f:
+                f.write(json.dumps(entry) + '\n')
+
+            # Periodic cleanup: every 100 appends, trim to last 1000 lines
+            if not hasattr(self, '_log_append_count'):
+                self._log_append_count = 0
+            self._log_append_count += 1
+
+            if self._log_append_count % 100 == 0:
+                self._trim_log_file(log_file)
+        except Exception as e:
+            print(f"Error in streaming log append to {log_file}: {e}", file=sys.stderr)
+
+    def _trim_log_file(self, log_file: Path) -> None:
+        """Trim log file to last 1000 lines"""
+        try:
+            if not log_file.exists():
+                return
+
+            # Read all lines
+            with open(log_file, 'r') as f:
+                lines = f.readlines()
+
+            # Keep only last 1000 lines
+            if len(lines) > 1000:
+                with open(log_file, 'w') as f:
+                    f.writelines(lines[-1000:])
+        except Exception as e:
+            print(f"Error trimming log file {log_file}: {e}", file=sys.stderr)
 
     # Getters for compatibility
     def get_tool_usage_log(self) -> List[Dict[str, Any]]:
@@ -584,11 +617,34 @@ class EnhancedSharedState:
         return self._load_log_file(self.workflow_events_file)
 
     def _load_log_file(self, log_file: Path) -> List[Dict[str, Any]]:
-        """Load log file entries"""
+        """Load log file entries (handles both old JSON format and new streaming format)"""
         try:
-            if log_file.exists():
+            if not log_file.exists():
+                return []
+
+            # Try to read as JSON first (old format)
+            try:
                 with open(log_file, 'r') as f:
-                    return json.load(f)
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        return data
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+            # Try to read as line-delimited JSON (new streaming format)
+            entries = []
+            with open(log_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            entry = json.loads(line)
+                            entries.append(entry)
+                        except json.JSONDecodeError:
+                            continue
+
+            return entries
+
         except Exception:
             pass
         return []
@@ -618,6 +674,70 @@ class EnhancedSharedState:
     def _get_timestamp(self) -> str:
         """Get current timestamp"""
         return datetime.now().isoformat()
+
+    def get_memory_usage(self) -> Dict[str, Any]:
+        """Get current memory usage information"""
+        try:
+            if PSUTIL_AVAILABLE:
+                process = psutil.Process()
+                memory_info = process.memory_info()
+                return {
+                    'rss_mb': memory_info.rss / 1024 / 1024,  # Resident Set Size
+                    'vms_mb': memory_info.vms / 1024 / 1024,  # Virtual Memory Size
+                    'percent': process.memory_percent(),
+                    'available_mb': psutil.virtual_memory().available / 1024 / 1024,
+                    'timestamp': self._get_timestamp()
+                }
+            else:
+                # Fallback without psutil
+                return {
+                    'rss_mb': 0,
+                    'vms_mb': 0,
+                    'percent': 0,
+                    'available_mb': 0,
+                    'timestamp': self._get_timestamp(),
+                    'note': 'psutil not available'
+                }
+        except Exception as e:
+            return {
+                'error': str(e),
+                'timestamp': self._get_timestamp()
+            }
+
+    def trigger_garbage_collection(self) -> Dict[str, Any]:
+        """Trigger garbage collection and return stats"""
+        try:
+            # Get counts before GC
+            before_counts = gc.get_count()
+
+            # Run garbage collection
+            collected = gc.collect()
+
+            # Get counts after GC
+            after_counts = gc.get_count()
+
+            return {
+                'collected_objects': collected,
+                'before_counts': before_counts,
+                'after_counts': after_counts,
+                'timestamp': self._get_timestamp()
+            }
+        except Exception as e:
+            return {
+                'error': str(e),
+                'timestamp': self._get_timestamp()
+            }
+
+    def log_memory_usage(self) -> None:
+        """Log current memory usage for monitoring"""
+        try:
+            memory_info = self.get_memory_usage()
+            self.log_workflow_event({
+                'type': 'memory_usage',
+                'data': memory_info
+            })
+        except Exception as e:
+            self.log_error(f"Error logging memory usage: {e}")
 
 
 # Global instance for compatibility
