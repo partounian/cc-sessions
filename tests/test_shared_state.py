@@ -49,4 +49,36 @@ def test_task_state_update(tmp_path: Path):
         os.chdir(cwd)
 
 
+def test_subagent_context_tracker(tmp_path: Path):
+    # Prepare state dir
+    state_dir = tmp_path / ".claude" / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+
+    # Reset singleton
+    from cc_sessions.hooks import shared_state as ss_mod
+    ss_mod._shared_state_instance = None
+    from cc_sessions.hooks.shared_state import get_shared_state
+
+    cwd = Path.cwd()
+    try:
+        import os
+        os.chdir(tmp_path)
+        ss = get_shared_state()
+        # Initially inactive
+        assert ss.is_subagent_active("s1") is False
+        # Enter twice
+        ss.enter_subagent("s1", "shared")
+        ss.enter_subagent("s1", "shared")
+        assert ss.is_subagent_active("s1") is True
+        # Exit twice
+        ss.exit_subagent("s1", "shared")
+        assert ss.is_subagent_active("s1") is True
+        ss.exit_subagent("s1", "shared")
+        # May still be active due to TTL, but clearing should force inactive
+        ss.clear_subagent_state("s1")
+        assert ss.is_subagent_active("s1") is False
+    finally:
+        import os
+        os.chdir(cwd)
+
 

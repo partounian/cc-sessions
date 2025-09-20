@@ -44,10 +44,11 @@ def test_bash_read_only_allows_ls(tmp_path: Path):
 
 def test_subagent_boundary_blocks_state_edits(tmp_path: Path):
     setup_project(tmp_path)
-    # Create subagent flag
-    (tmp_path / ".claude" / "state" / "in_subagent_context.flag").touch()
+    # Simulate subagent active using shared state tracker file
+    state_file = tmp_path / ".claude" / "state" / "subagent_state.json"
+    state_file.write_text(json.dumps({"sessions": {"abc": {"types": {"shared": {"count": 1, "last_seen": "2025-01-01T00:00:00"}}}}}))
     # Attempt edit under .claude/state
-    payload = {"tool_name": "Edit", "tool_input": {"file_path": str(Path(".claude/state/test.json"))}}
+    payload = {"tool_name": "Edit", "tool_input": {"file_path": str(Path(".claude/state/test.json"))}, "session_id": "abc"}
     result = run_hook(tmp_path, payload)
     # In discussion mode, DAIC block occurs before subagent boundary check
     assert result.returncode == 2

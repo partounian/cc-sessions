@@ -58,6 +58,7 @@ class SharedState:
         self.context_usage_log_file = self.state_dir / "context_usage_log.json"
         self.error_log_file = self.state_dir / "error_log.json"
         self.workflow_events_file = self.state_dir / "workflow_events.json"
+        self.subagent_state_file = self.state_dir / "subagent_state.json"
 
         # Ensure directories exist
         self._ensure_directories()
@@ -588,6 +589,85 @@ class SharedState:
     def log_workflow_event(self, event: Dict[str, Any]) -> None:
         """Log workflow event"""
         self._append_to_log_file(self.workflow_events_file, event)
+
+    # Subagent context tracking
+    def _load_subagent_state(self) -> Dict[str, Any]:
+        try:
+            if self.subagent_state_file.exists():
+                with open(self.subagent_state_file, 'r') as f:
+                    return json.load(f)
+        except Exception:
+            pass
+        return {"sessions": {}}
+
+    def _save_subagent_state(self, data: Dict[str, Any]) -> None:
+        try:
+            self._ensure_state_dir()
+            with open(self.subagent_state_file, 'w') as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
+
+    def enter_subagent(self, session_id: str, subagent_type: str = "shared") -> None:
+        """Increment subagent counter for a session and type with TTL."""
+        state = self._load_subagent_state()
+        sessions = state.setdefault("sessions", {})
+        entry = sessions.setdefault(session_id, {"types": {}, "updated": None})
+        types = entry.setdefault("types", {})
+        info = types.setdefault(subagent_type, {"count": 0, "last_seen": None})
+        info["count"] = max(0, int(info.get("count", 0))) + 1
+        info["last_seen"] = self._get_timestamp()
+        entry["updated"] = self._get_timestamp()
+        self._save_subagent_state(state)
+
+    def exit_subagent(self, session_id: str, subagent_type: str = "shared") -> None:
+        """Decrement subagent counter and cleanup when zero."""
+        state = self._load_subagent_state()
+        sessions = state.setdefault("sessions", {})
+        entry = sessions.setdefault(session_id, {"types": {}, "updated": None})
+        types = entry.setdefault("types", {})
+        info = types.setdefault(subagent_type, {"count": 0, "last_seen": None})
+        info["count"] = max(0, int(info.get("count", 0)) - 1)
+        info["last_seen"] = self._get_timestamp()
+        entry["updated"] = self._get_timestamp()
+        # Cleanup when all counters zero
+        if info["count"] <= 0:
+            types.pop(subagent_type, None)
+        if not types:
+            sessions.pop(session_id, None)
+        self._save_subagent_state(state)
+
+    def is_subagent_active(self, session_id: str) -> bool:
+        """Return True if any subagent count > 0 or recent within TTL."""
+        ttl_seconds = 60  # brief grace window
+        try:
+            from datetime import datetime, timedelta
+            state = self._load_subagent_state()
+            entry = state.get("sessions", {}).get(session_id)
+            if not entry:
+                return False
+            for info in entry.get("types", {}).values():
+                if int(info.get("count", 0)) > 0:
+                    return True
+                ts = info.get("last_seen")
+                if ts:
+                    try:
+                        if datetime.now() - datetime.fromisoformat(ts) < timedelta(seconds=ttl_seconds):
+                            return True
+                    except Exception:
+                        continue
+        except Exception:
+            return False
+        return False
+
+    def clear_subagent_state(self, session_id: str | None = None) -> None:
+        """Clear subagent state for a session or all (on session end)."""
+        state = self._load_subagent_state()
+        if session_id is None:
+            state["sessions"] = {}
+        else:
+            state.get("sessions", {}).pop(session_id, None)
+        self._save_subagent_state(state)
 
     def _append_to_log_file(self, log_file: Path, entry: Dict[str, Any]) -> None:
         """Append entry to log file using streaming approach to prevent memory accumulation"""

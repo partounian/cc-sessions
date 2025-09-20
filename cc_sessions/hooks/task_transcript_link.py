@@ -83,7 +83,7 @@ task_call = clean_transcript[-1]
 subagent_type = _extract_subagent_type(task_call)
 
 # Get project root using shared_state
-from shared_state import get_project_root
+from shared_state import get_project_root, get_shared_state
 PROJECT_ROOT = get_project_root()
 
 
@@ -114,10 +114,12 @@ for item in target_dir.iterdir():
     if item.is_file():
         item.unlink()
 
-# Set flag indicating we're entering a subagent context
-# This prevents DAIC reminders from the subagent's tool calls
-subagent_flag = PROJECT_ROOT / '.claude' / 'state' / 'in_subagent_context.flag'
-subagent_flag.touch()
+# Record entering subagent context with session id for robust tracking
+session_id = input_data.get('session_id') or 'default'
+try:
+    get_shared_state().enter_subagent(session_id, subagent_type)
+except Exception:
+    pass
 
 # Set up token counting
 if tiktoken is not None:

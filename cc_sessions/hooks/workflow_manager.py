@@ -266,12 +266,17 @@ def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
 
     return True
 
-def check_subagent_boundaries(tool_name: str, tool_input: dict):
+def check_subagent_boundaries(tool_name: str, tool_input: dict, input_data: dict):
     """Check if subagents are trying to modify system state files."""
     project_root = get_project_root()
-    subagent_flag = project_root / '.claude' / 'state' / 'in_subagent_context.flag'
+    # Determine if we're inside a subagent using shared state tracker
+    session_id = input_data.get("session_id") or "default"
+    try:
+        in_subagent = get_shared_state().is_subagent_active(session_id)
+    except Exception:
+        in_subagent = False
 
-    if not subagent_flag.exists() or tool_name not in ["Write", "Edit", "MultiEdit"]:
+    if not in_subagent or tool_name not in ["Write", "Edit", "MultiEdit"]:
         return True
 
     file_path_str = tool_input.get("file_path", "")
@@ -294,15 +299,11 @@ def check_subagent_boundaries(tool_name: str, tool_input: dict):
 
 def handle_post_tool_use(tool_name: str, tool_input: dict, cwd: str):
     """Handle post-tool-use reminders and context management."""
-    # Check if we're in a subagent context
-    project_root = get_project_root()
-    subagent_flag = project_root / '.claude' / 'state' / 'in_subagent_context.flag'
-    in_subagent = subagent_flag.exists()
+    # Check if we're in a subagent context via shared state tracker is handled in boundary check
+    in_subagent = False
 
-    # If this is the Task tool completing, clear the subagent flag
+    # If this is the Task tool completing, don't show reminder
     if tool_name == "Task" and in_subagent:
-        subagent_flag.unlink()
-        # Don't show DAIC reminder for Task completion
         return False
 
     # Check current mode
@@ -387,7 +388,7 @@ def main():
                 sys.exit(2)  # Block with feedback
 
         # Check subagent boundaries
-        if not check_subagent_boundaries(tool_name, tool_input):
+        if not check_subagent_boundaries(tool_name, tool_input, input_data):
             log_tool_event(tool_name, tool_input, False, reason='subagent_boundary')
             sys.exit(2)  # Block with feedback
 
