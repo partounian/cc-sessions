@@ -16,7 +16,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
 - `cc_sessions/hooks/sessions-enforce.py` - Core DAIC enforcement and branch protection
 - `cc_sessions/hooks/session-start.py` - Automatic task context loading
-- `cc_sessions/hooks/user-messages.py` - Trigger phrase detection and mode switching
+- `cc_sessions/hooks/user_messages.py` - Trigger phrase detection and mode switching
 - `cc_sessions/hooks/post-tool-use.py` - Implementation mode reminders
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
@@ -100,7 +100,7 @@ Windows-specific configuration in `.claude/settings.json`:
 
 ### Hook Architecture
 - Pre-tool-use hooks for enforcement (sessions-enforce.py)
-- Post-tool-use hooks for reminders (post-tool-use.py) 
+- Post-tool-use hooks for reminders (post_tool_use.py) 
 - User message hooks for trigger detection (user-messages.py)
 - Session start hooks for context loading (session-start.py)
 - Shared state management across all hooks (shared_state.py)
@@ -123,6 +123,7 @@ Windows-specific configuration in `.claude/settings.json`:
 - Detection mechanism prevents DAIC reminders in subagent contexts
 - Subagents blocked from editing .claude/state files
 - Strict separation between main thread and agent operations
+- Subagent context is tracked in `.claude/state/subagent_state.json` (per-session counters) rather than a single flag file
 
 ### Windows Compatibility
 - Platform detection using `os.name == 'nt'` (Python) and `process.platform === 'win32'` (Node.js)
