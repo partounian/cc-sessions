@@ -20,10 +20,10 @@ def cleanup_old_transcript_chunks(batch_dir: Path) -> None:
     """Simple cleanup: keep only last 20 chunks per subagent type"""
     if not batch_dir.exists():
         return
-    
-    chunk_files = sorted(batch_dir.glob("current_transcript_*.json"), 
+
+    chunk_files = sorted(batch_dir.glob("current_transcript_*.json"),
                         key=lambda f: f.stat().st_mtime, reverse=True)
-    
+
     # Keep only last 20 chunks, delete the rest
     for old_chunk in chunk_files[20:]:
         try:
@@ -38,49 +38,49 @@ def cleanup_old_transcript_chunks(batch_dir: Path) -> None:
 def test_transcript_chunk_cleanup_unit():
     """Unit test: Test that cleanup keeps only recent transcript chunks"""
     print("🧪 Testing transcript chunk cleanup (unit test)...")
-    
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         batch_dir = tmp_path / "transcript_chunks"
         batch_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create 25 transcript chunk files with different timestamps
         for i in range(25):
             chunk_file = batch_dir / f"current_transcript_{i:03}.json"
             with open(chunk_file, 'w') as f:
                 json.dump([{"chunk": i, "data": f"chunk_data_{i}"}], f)
-            
+
             # Set different modification times (older files first)
             old_time = time.time() - (25 - i) * 60  # 1 minute apart
             os.utime(chunk_file, (old_time, old_time))
-        
+
         # Verify we have 25 files
         initial_files = list(batch_dir.glob("current_transcript_*.json"))
         assert len(initial_files) == 25, f"Expected 25 files, got {len(initial_files)}"
         print(f"✅ Created {len(initial_files)} test files")
-        
+
         # Run cleanup
         cleanup_old_transcript_chunks(batch_dir)
-        
+
         # Verify only last 20 chunks remain
         remaining_files = list(batch_dir.glob("current_transcript_*.json"))
         assert len(remaining_files) == 20, f"Expected 20 files after cleanup, got {len(remaining_files)}"
         print(f"✅ Cleanup successful: {len(remaining_files)} files remaining")
-        
+
         # Verify the most recent files are kept
         remaining_numbers = sorted([int(f.stem.split('_')[-1]) for f in remaining_files])
         expected_numbers = list(range(5, 25))  # Files 5-24 kept
         assert remaining_numbers == expected_numbers, f"Expected {expected_numbers}, got {remaining_numbers}"
         print(f"✅ Correct files kept: {remaining_numbers}")
-        
+
         print("✅ Transcript chunk cleanup unit test PASSED")
 
 def test_cleanup_handles_missing_directory():
     """Unit test: Test that cleanup handles missing directory gracefully"""
     print("🧪 Testing cleanup with missing directory...")
-    
+
     missing_dir = Path("/nonexistent/directory")
-    
+
     # Should not raise exception
     try:
         cleanup_old_transcript_chunks(missing_dir)
@@ -92,17 +92,17 @@ def test_cleanup_handles_missing_directory():
 def test_cleanup_handles_file_errors_gracefully():
     """Unit test: Test that cleanup handles file errors gracefully"""
     print("🧪 Testing cleanup with file errors...")
-    
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         batch_dir = tmp_path / "transcript_chunks"
         batch_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Create a file
         chunk_file = batch_dir / "current_transcript_001.json"
         with open(chunk_file, 'w') as f:
             json.dump([{"chunk": 1}], f)
-        
+
         # Test cleanup (should not raise exception even if there are permission issues)
         try:
             cleanup_old_transcript_chunks(batch_dir)
@@ -114,28 +114,28 @@ def test_cleanup_handles_file_errors_gracefully():
 def test_log_file_memory_issue_demonstration():
     """Unit test: Demonstrate the current log file memory issue"""
     print("🧪 Demonstrating log file memory issue...")
-    
+
     with tempfile.TemporaryDirectory() as tmp_dir:
         tmp_path = Path(tmp_dir)
         log_file = tmp_path / "test_log.json"
-        
+
         # Create a large existing log file (simulating current behavior)
         large_log_data = [{"entry": f"log_entry_{i}", "data": "x" * 1000} for i in range(500)]
         with open(log_file, 'w') as f:
             json.dump(large_log_data, f)
-        
+
         # Simulate current problematic behavior: load entire file into memory
         with open(log_file, 'r') as f:
             data = json.load(f)
-        
+
         # This loads the entire 500-entry file into memory every time
         assert len(data) == 500
         print(f"✅ Current behavior loads {len(data)} entries into memory (problematic)")
-        
+
         # Show file size
         file_size = log_file.stat().st_size
         print(f"✅ File size: {file_size} bytes")
-        
+
         # Demonstrate streaming approach would be better
         print("✅ Streaming approach would append without loading entire file")
 
@@ -156,9 +156,9 @@ def test_streaming_log_append():
             os.chdir(tmp_path)
 
             # Import after changing directory
-            from cc_sessions.hooks.shared_state import EnhancedSharedState
+            from cc_sessions.hooks.shared_state import SharedState
 
-            shared_state = EnhancedSharedState()
+            shared_state = SharedState()
 
             # Test streaming append
             for i in range(5):
@@ -194,9 +194,9 @@ def test_memory_monitoring():
             os.chdir(tmp_path)
 
             # Import after changing directory
-            from cc_sessions.hooks.shared_state import EnhancedSharedState
+            from cc_sessions.hooks.shared_state import SharedState
 
-            shared_state = EnhancedSharedState()
+            shared_state = SharedState()
 
             # Test memory usage monitoring
             memory_info = shared_state.get_memory_usage()
@@ -286,9 +286,9 @@ def test_optimized_directory_traversal():
             os.chdir(workspace_root)
 
             # Import after changing directory
-            from cc_sessions.hooks.shared_state import EnhancedSharedState
+            from cc_sessions.hooks.shared_state import SharedState
 
-            shared_state = EnhancedSharedState()
+            shared_state = SharedState()
             repositories = shared_state.detect_workspace_repositories()
 
             # Verify we found repositories but didn't accumulate memory
@@ -299,10 +299,38 @@ def test_optimized_directory_traversal():
         finally:
             os.chdir(original_cwd)
 
+def test_get_shared_state_returns_correct_type():
+    """Test that get_shared_state() returns SharedState instance"""
+    print("🧪 Testing get_shared_state() returns SharedState...")
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+
+        # Change to temp directory for shared state
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(tmp_path)
+
+            # Import after changing directory
+            from cc_sessions.hooks.shared_state import get_shared_state, SharedState
+
+            # Test that get_shared_state() returns SharedState instance
+            shared_state = get_shared_state()
+            assert isinstance(shared_state, SharedState), f"Expected SharedState instance, got {type(shared_state)}"
+            print("✅ get_shared_state() returns SharedState instance")
+
+            # Test that it's a singleton
+            shared_state2 = get_shared_state()
+            assert shared_state is shared_state2, "get_shared_state() should return same instance"
+            print("✅ get_shared_state() returns singleton instance")
+
+        finally:
+            os.chdir(original_cwd)
+
 def main():
     """Run all memory management tests (unit + integration)"""
     print("🚀 Running cc-sessions memory management tests...\n")
-    
+
     # Unit tests
     unit_tests = [
         test_transcript_chunk_cleanup_unit,
@@ -310,15 +338,16 @@ def main():
         test_cleanup_handles_file_errors_gracefully,
         test_log_file_memory_issue_demonstration,
     ]
-    
+
     # Integration tests
     integration_tests = [
         test_streaming_log_append,
         test_memory_monitoring,
         test_enhanced_agent_cleanup,
         test_optimized_directory_traversal,
+        test_get_shared_state_returns_correct_type,
     ]
-    
+
     all_tests = unit_tests + integration_tests
 
     passed = 0
@@ -334,7 +363,7 @@ def main():
             import traceback
             traceback.print_exc()
         print()
-    
+
     print("📋 Running integration tests...")
     for test in integration_tests:
         try:
@@ -345,7 +374,7 @@ def main():
             import traceback
             traceback.print_exc()
         print()
-    
+
     print(f"📊 Test Results: {passed}/{total} passed")
 
     if passed == total:

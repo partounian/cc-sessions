@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Enhanced Shared State Management for Claude Code Sessions hooks.
+Shared State Management for Claude Code Sessions hooks.
 
 Integrates multi-repository support, workspace awareness, and comprehensive
 state management into a single, efficient module.
 
-This enhanced version replaces:
+This version replaces:
 - shared_state.py (basic state management)
 - multi_repo_config.py (multi-repository configuration)
 - workspace_task_manager.py (cross-repo task coordination)
@@ -13,7 +13,7 @@ This enhanced version replaces:
 Key features:
 - Multi-repository workspace detection and management
 - Cross-repository task coordination
-- Enhanced state persistence and management
+- State persistence and management
 - Workspace-aware context sharing
 - Agent state management
 - Performance monitoring and analytics
@@ -34,8 +34,8 @@ except ImportError:
     PSUTIL_AVAILABLE = False
 
 
-class EnhancedSharedState:
-    """Enhanced shared state management with multi-repository support"""
+class SharedState:
+    """Shared state management with multi-repository support"""
 
     def __init__(self):
         self.project_root = self._get_project_root()
@@ -189,6 +189,48 @@ class EnhancedSharedState:
         self.multi_repo_config['repositories'][str(repo_path)] = repo_info
         self.save_multi_repo_config()
 
+    def _synchronize_repositories(self, detected_repos: List[Path], prune: bool = True) -> None:
+        """Synchronize multi-repo config with detected repositories.
+
+        - Ensures detected repositories exist and are marked active
+        - Optionally prunes any repositories not detected (or marks inactive)
+        """
+        existing = self.multi_repo_config.get('repositories', {})
+        detected_paths = {str(p) for p in detected_repos}
+
+        # Add/update detected repositories
+        for repo_path in detected_repos:
+            key = str(repo_path)
+            info = existing.get(key, {
+                'name': repo_path.name,
+                'path': key,
+                'type': 'git',
+                'description': f'Auto-detected repository: {repo_path.name}',
+                'last_accessed': None,
+                'active': True,
+            })
+            # Keep fields updated
+            info['name'] = repo_path.name
+            info['path'] = key
+            info['type'] = 'git'
+            info['description'] = f'Auto-detected repository: {repo_path.name}'
+            info['active'] = True
+            existing[key] = info
+
+        # Prune or deactivate repositories not in detected set
+        for key in list(existing.keys()):
+            if key not in detected_paths:
+                if prune:
+                    del existing[key]
+                else:
+                    try:
+                        existing[key]['active'] = False
+                    except Exception:
+                        existing[key] = {'name': Path(key).name, 'path': key, 'type': 'git', 'description': 'Inactive', 'last_accessed': None, 'active': False}
+
+        self.multi_repo_config['repositories'] = existing
+        self.save_multi_repo_config()
+
     def get_repositories(self) -> Dict[str, Dict]:
         """Get all registered repositories"""
         return self.multi_repo_config['repositories']
@@ -267,19 +309,14 @@ class EnhancedSharedState:
 
     def setup_workspace_awareness(self) -> Dict[str, Any]:
         """Set up workspace awareness for cc-sessions"""
-        # Auto-detect repositories
+        # Auto-detect repositories (respecting sessions-config includes)
         detected_repos = self.detect_workspace_repositories()
-        for repo_path in detected_repos:
-            repo_name = repo_path.name
-            self.register_repository(
-                repo_path,
-                repo_name,
-                'git',
-                f'Auto-detected repository: {repo_name}'
-            )
 
-        # Create workspace context
-        workspace_context = {
+        # Synchronize multi-repo config to contain ONLY detected repositories
+        self._synchronize_repositories(detected_repos, prune=True)
+
+        # Return computed context without persisting a snapshot file
+        return {
             'initialized_at': self._get_timestamp(),
             'workspace_root': str(self.workspace_root),
             'project_root': str(self.project_root),
@@ -287,11 +324,6 @@ class EnhancedSharedState:
             'multi_repo_config': self.get_workspace_context(),
             'task_manager_initialized': True
         }
-
-        with open(self.workspace_context_file, 'w') as f:
-            json.dump(workspace_context, f, indent=2)
-
-        return workspace_context
 
     def get_workspace_context(self) -> Dict[str, Any]:
         """Get workspace-wide context information"""
@@ -743,11 +775,11 @@ class EnhancedSharedState:
 # Global instance for compatibility
 _shared_state_instance = None
 
-def get_shared_state() -> EnhancedSharedState:
+def get_shared_state() -> SharedState:
     """Get the global shared state instance"""
     global _shared_state_instance
     if _shared_state_instance is None:
-        _shared_state_instance = EnhancedSharedState()
+        _shared_state_instance = SharedState()
     return _shared_state_instance
 
 # Compatibility functions for existing code
@@ -791,7 +823,3 @@ def ensure_state_dir() -> None:
     """Ensure state directory exists (compatibility function)"""
     get_shared_state()._ensure_state_dir()
 
-# Legacy SharedState class for backward compatibility
-class SharedState(EnhancedSharedState):
-    """Legacy SharedState class for backward compatibility"""
-    pass
