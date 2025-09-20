@@ -647,7 +647,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user-messages.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user_messages.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/user_messages.py"
           }
         ]
       }
@@ -699,7 +699,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-lifecycle.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/session-lifecycle.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session_lifecycle.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/session_lifecycle.py"
           }
         ]
       }
@@ -709,7 +709,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context_manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py"
           }
         ]
       }
@@ -719,7 +719,7 @@ async function saveConfig(installStatusline = false) {
         hooks: [
           {
             type: "command",
-            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+            command: process.platform === 'win32' ? "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context_manager.py\"" : "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py"
           }
         ]
       }

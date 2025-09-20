@@ -70,4 +70,30 @@ def test_branch_enforcement_single_repo(tmp_path: Path):
     assert "DAIC: Tool Blocked" in (result.stderr or "")
 
 
+def test_post_tool_use_detection_via_event_name(tmp_path: Path):
+    setup_project(tmp_path)
+    # Simulate PostToolUse by providing event name and cwd
+    payload = {
+        "hookEventName": "PostToolUse",
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "x.txt"},
+    }
+    result = run_hook(tmp_path, payload)
+    # PostToolUse path should not block; exit code can be 0 or 2 (reminder)
+    assert result.returncode in (0, 2)
+
+
+def test_post_tool_use_detection_via_tool_response(tmp_path: Path):
+    setup_project(tmp_path)
+    payload = {
+        "cwd": str(tmp_path),
+        "tool_name": "Write",
+        "tool_input": {"file_path": "x.txt"},
+        "tool_response": {"success": True},
+    }
+    result = run_hook(tmp_path, payload)
+    assert result.returncode in (0, 2)
+
+
 

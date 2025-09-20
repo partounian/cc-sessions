@@ -65,6 +65,14 @@ DEFAULT_CONFIG = {
     ]
 }
 
+def get_hook_event_name(input_data: dict) -> str:
+    """Return the hook event name from runner input.
+
+    Prefer the canonical "hookEventName" key but also support the
+    documented "hook_event_name" variant for robustness.
+    """
+    return input_data.get("hookEventName") or input_data.get("hook_event_name") or ""
+
 def load_config():
     """Load configuration from file or use defaults."""
     if CONFIG_FILE.exists():
@@ -328,8 +336,13 @@ def main():
         # Load configuration
         config = load_config()
 
-        # Check if this is a post-tool-use event (indicated by presence of cwd)
-        is_post_tool_use = bool(cwd)
+        # Determine hook event type reliably
+        event_name = get_hook_event_name(input_data)
+        # Primary signal: explicit event name
+        is_post_tool_use = (event_name == "PostToolUse")
+        # Fallback: presence of tool_response implies PostToolUse in older runners
+        if not is_post_tool_use and "tool_response" in input_data:
+            is_post_tool_use = True
 
         if is_post_tool_use:
             # Handle post-tool-use functionality

@@ -397,7 +397,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user_messages.py"
           }
         ]
       }
@@ -449,7 +449,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-lifecycle.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session_lifecycle.py"
           }
         ]
       }
@@ -459,7 +459,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py"
           }
         ]
       }
@@ -469,7 +469,7 @@ settings_content='{
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py"
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py"
           }
         ]
       }

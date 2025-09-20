@@ -823,3 +823,8 @@ def ensure_state_dir() -> None:
     """Ensure state directory exists (compatibility function)"""
     get_shared_state()._ensure_state_dir()
 
+# Public toggle function for scripts (e.g., daic)
+def toggle_daic_mode() -> str:
+    """Toggle DAIC mode using the shared instance and return message."""
+    return get_shared_state().toggle_daic_mode()
+

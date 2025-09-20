@@ -600,7 +600,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user-messages.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user-messages.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/user_messages.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\user_messages.py\""
                         }
                     ]
                 }
@@ -652,7 +652,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-lifecycle.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session-lifecycle.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session_lifecycle.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\session_lifecycle.py\""
                         }
                     ]
                 }
@@ -662,7 +662,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context_manager.py\""
                         }
                     ]
                 }
@@ -672,7 +672,7 @@ class SessionsInstaller:
                     "hooks": [
                         {
                             "type": "command",
-                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context-manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context-manager.py\""
+                            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/context_manager.py" if os.name != 'nt' else "python \"%CLAUDE_PROJECT_DIR%\\.claude\\hooks\\context_manager.py\""
                         }
                     ]
                 }
