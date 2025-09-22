@@ -14,10 +14,10 @@ The framework includes persistent task management with git branch enforcement, c
 ## Key Files
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
-- `cc_sessions/hooks/sessions-enforce.py` - Core DAIC enforcement and branch protection
-- `cc_sessions/hooks/session-start.py` - Automatic task context loading
+- `cc_sessions/hooks/workflow_manager.py` - Core DAIC enforcement and branch protection (unified)
+- `cc_sessions/hooks/session_start.py` - Automatic task context loading
 - `cc_sessions/hooks/user_messages.py` - Trigger phrase detection and mode switching
-- `cc_sessions/hooks/post-tool-use.py` - Implementation mode reminders
+- `cc_sessions/hooks/workflow_manager.py` - Implementation mode reminders (PostToolUse)
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
 - `cc_sessions/agents/logging.md` - Session work log consolidation agent
@@ -99,10 +99,9 @@ Windows-specific configuration in `.claude/settings.json`:
 ## Key Patterns
 
 ### Hook Architecture
-- Pre-tool-use hooks for enforcement (sessions-enforce.py)
-- Post-tool-use hooks for reminders (post_tool_use.py) 
-- User message hooks for trigger detection (user-messages.py)
-- Session start hooks for context loading (session-start.py)
+- Pre-tool-use/Post-tool-use handled by `workflow_manager.py`
+- User message hooks for trigger detection (`user_messages.py`)
+- Session start hooks for context loading (`session_start.py`)
 - Shared state management across all hooks (shared_state.py)
 - Cross-platform path handling using pathlib.Path throughout
 - Windows-specific command prefixing with explicit python interpreter
