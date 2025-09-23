@@ -23,6 +23,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Add the cc_sessions directory to the path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from shared_state import (ensure_state_dir, get_project_root,
                                    get_shared_state, get_task_state)
 
@@ -151,6 +154,26 @@ Loading task file: {task_state['task']}.md
 {"=" * 60}
 """
 
+                # If a compaction manifest exists, surface resume instructions
+                try:
+                    comp_dir = get_project_root() / '.claude' / 'state' / 'compaction'
+                    manifest_file = comp_dir / 'context_manifest.json'
+                    if manifest_file.exists():
+                        with open(manifest_file, 'r') as f:
+                            manifest = json.load(f)
+                        resume_instructions = manifest.get('recovery_instructions') or []
+                        if resume_instructions:
+                            context += """
+
+Resume plan from last compaction:
+
+"""
+                            for instr in resume_instructions[:5]:
+                                context += f"- {instr}\n"
+                    # No metadata file; rely on task-file checkpoints
+                except Exception:
+                    pass
+
                 if task_updated:
                     context += """
 [Note: Task status updated from 'pending' to 'in-progress']
@@ -161,6 +184,26 @@ Follow the task-startup protocol to create branches and set up the work environm
 Review the Work Log at the end of the task file above.
 Continue from where you left off, updating the work log as you progress.
 """
+            else:
+                # Task state exists but task file missing; still surface resume info if present
+                try:
+                    comp_dir = get_project_root() / '.claude' / 'state' / 'compaction'
+                    manifest_file = comp_dir / 'context_manifest.json'
+                    if manifest_file.exists():
+                        with open(manifest_file, 'r') as f:
+                            manifest = json.load(f)
+                        resume_instructions = manifest.get('recovery_instructions') or []
+                        if resume_instructions:
+                            context += """
+
+Resume plan from last compaction:
+
+"""
+                            for instr in resume_instructions[:5]:
+                                context += f"- {instr}\n"
+                    # No metadata file; rely on task-file checkpoints
+                except Exception:
+                    pass
         else:
             # No active task - list available tasks
             tasks_dir = sessions_dir / 'tasks'

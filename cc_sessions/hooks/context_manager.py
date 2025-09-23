@@ -96,6 +96,9 @@ class ContextManager:
             # Update compaction metadata
             self._update_compaction_metadata(context_manifest)
 
+            # Append checkpoint entry to the current task file's Work Log if available
+            self._append_checkpoint_to_task_file(task_context, context_manifest)
+
             result = {
                 'status': 'success',
                 'message': 'Context preserved successfully',
@@ -125,6 +128,50 @@ class ContextManager:
                 'message': f'Failed to preserve context: {e}',
                 'timestamp': self._get_timestamp()
             }
+
+    def _append_checkpoint_to_task_file(self, task_context: Dict[str, Any], manifest: Dict[str, Any]) -> None:
+        """Append a checkpoint line into the task file Work Log, if task file exists.
+
+        We keep this minimal and non-destructive: append a new bullet under '## Work Log'.
+        """
+        try:
+            current_task = task_context.get('current_task') or {}
+            task_name = current_task.get('task') or current_task.get('id') or current_task.get('name')
+            if not task_name:
+                return
+
+            # Find task markdown file under sessions/tasks
+            from hooks.shared_state import get_project_root
+            project_root = get_project_root()
+            task_file = project_root / 'sessions' / 'tasks' / f"{task_name}.md"
+            if not task_file.exists():
+                return
+
+            text = task_file.read_text()
+
+            # Ensure Work Log section exists; if not, add at end
+            if '## Work Log' not in text:
+                text = text.rstrip() + "\n\n## Work Log\n"
+
+            # Build checkpoint entry
+            ts = self._get_timestamp().split('T')[0]
+            checkpoint = f"- [{ts}] [Checkpoint] Context compacted (id: {manifest.get('compaction_id', 'n/a')}). Resume hints: "
+            hints = manifest.get('recovery_instructions') or []
+            if hints:
+                checkpoint += hints[0][:200]
+
+            # Append under Work Log by placing at the end
+            if not text.endswith('\n'):
+                text += '\n'
+            text += checkpoint + '\n'
+
+            task_file.write_text(text)
+        except Exception as e:
+            # Best-effort logging only
+            try:
+                self._log_warning(f"Could not append checkpoint to task file: {e}")
+            except Exception:
+                pass
 
     def _handle_notification(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Handle different types of notifications"""
@@ -392,17 +439,27 @@ class ContextManager:
         }
 
         try:
-            # Get DAIC mode
-            daic_mode = self.shared_state.get_daic_mode()
-            workflow_state['daic_mode'] = daic_mode
+            # Get DAIC mode and normalize to 'discussion'/'implementation'
+            try:
+                is_discussion = self.shared_state.check_daic_mode_bool()
+                workflow_state['daic_mode'] = 'discussion' if is_discussion else 'implementation'
+            except Exception:
+                workflow_state['daic_mode'] = 'unknown'
 
             # Get current task
             current_task = self.shared_state.get_current_task()
             if current_task:
-                workflow_state['current_phase'] = current_task.get('phase', 'unknown')
+                # Prefer explicit phase, else inferred from DAIC
+                phase = current_task.get('phase')
+                if not phase or not isinstance(phase, str):
+                    phase = workflow_state.get('daic_mode', 'unknown')
+                workflow_state['current_phase'] = phase
+
+                task_name = current_task.get('task') or current_task.get('id') or current_task.get('name')
+                task_title = current_task.get('title') or task_name
                 workflow_state['workflow_progress'] = {
-                    'task_id': current_task.get('id'),
-                    'task_title': current_task.get('title'),
+                    'task_id': task_name,
+                    'task_title': task_title,
                     'progress_percentage': current_task.get('progress', 0)
                 }
 
@@ -650,14 +707,16 @@ class ContextManager:
 
             # Workflow recovery instructions
             current_phase = workflow_state.get('current_phase')
-            if current_phase:
+            if current_phase and current_phase != 'unknown':
                 instructions.append(f"Resume workflow in {current_phase} phase")
 
             # Task recovery instructions
             current_task = task_context.get('current_task')
             if current_task:
-                task_title = current_task.get('title', 'Unknown Task')
-                instructions.append(f"Continue with task: {task_title}")
+                task_name = current_task.get('task') or current_task.get('id') or current_task.get('name')
+                task_title = current_task.get('title') or task_name
+                if task_title:
+                    instructions.append(f"Continue with task: {task_title}")
 
             # Context recovery instructions
             related_files = task_context.get('related_files', [])

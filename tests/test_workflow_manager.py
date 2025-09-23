@@ -97,4 +97,21 @@ def test_post_tool_use_detection_via_tool_response(tmp_path: Path):
     assert result.returncode in (0, 2)
 
 
+def test_cooldown_allows_tools_after_switch(tmp_path: Path):
+    setup_project(tmp_path)
+    # Manually set cooldown to active by invoking user_messages trigger path would be overkill; simulate
+    state_dir = tmp_path / ".claude" / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    (state_dir / "daic-mode.json").write_text(json.dumps({"mode": "implementation"}))
+    # Write cooldown file
+    from datetime import datetime, timedelta
+    expires = (datetime.now() + timedelta(seconds=60)).isoformat()
+    (state_dir / "daic-cooldown.json").write_text(json.dumps({"expires_at": expires, "seconds": 60}))
+    # Now attempt an Edit tool; should not be blocked by DAIC even if discussion mode would block
+    payload = {"tool_name": "Edit", "tool_input": {"file_path": "app.py"}}
+    result = run_hook(tmp_path, payload)
+    # Should be allowed (exit 0) or pass through with reminder codes
+    assert result.returncode in (0,)
+
+
 

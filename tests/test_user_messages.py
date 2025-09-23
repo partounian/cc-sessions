@@ -32,3 +32,20 @@ def test_emergency_stop(tmp_path: Path):
     assert "EMERGENCY STOP" in (res.stdout or "")
 
 
+def test_output_guard_for_logging(tmp_path: Path):
+    setup_project(tmp_path)
+    payload = {"prompt": "please run the logging agent", "transcript_path": ""}
+    res = run_hook(tmp_path, payload)
+    assert res.returncode == 0
+    out = res.stdout or ""
+    assert "[Output Guard]" in out
+
+
+def test_continue_triggers_implementation(tmp_path: Path):
+    setup_project(tmp_path)
+    payload = {"prompt": "lets continue", "transcript_path": ""}
+    res = run_hook(tmp_path, payload)
+    assert res.returncode == 0
+    assert "Implementation Mode Activated" in (res.stdout or "")
+
+

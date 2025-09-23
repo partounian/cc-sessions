@@ -12,14 +12,14 @@ if [[ "$PROJECT_ROOT" == "/" ]]; then
     exit 1
 fi
 
-# Find the hooks directory
-HOOKS_DIR="$PROJECT_ROOT/.claude/hooks"
+# Find the cc_sessions directory (parent of hooks)
+CC_SESSIONS_DIR="$(dirname "$PROJECT_ROOT/.claude/hooks")"
 
 # Run Python inline to toggle mode
 python3 -c "
 import sys
-sys.path.insert(0, '$HOOKS_DIR')
-from shared_state import toggle_daic_mode
+sys.path.insert(0, '$CC_SESSIONS_DIR')
+from hooks.shared_state import toggle_daic_mode
 mode = toggle_daic_mode()
 print('[DAIC] ' + mode)
 "

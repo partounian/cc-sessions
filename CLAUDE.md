@@ -1,6 +1,7 @@
 # cc-sessions CLAUDE.md
 
 ## Purpose
+
 Complete Claude Code Sessions framework that enforces Discussion-Alignment-Implementation-Check (DAIC) methodology for AI pair programming workflows.
 
 ## Narrative Summary
@@ -12,12 +13,13 @@ The core innovation is the DAIC (Discussion-Alignment-Implementation-Check) enfo
 The framework includes persistent task management with git branch enforcement, context preservation through session restarts, specialized subagents for heavy operations, and automatic context compaction when approaching token limits.
 
 ## Key Files
+
 - `cc_sessions/install.py` - Cross-platform installer with Windows compatibility and native shell support
 - `install.js` - Node.js installer wrapper with Windows command detection and path handling
 - `cc_sessions/hooks/workflow_manager.py` - Core DAIC enforcement and branch protection (unified)
 - `cc_sessions/hooks/session_start.py` - Automatic task context loading
 - `cc_sessions/hooks/user_messages.py` - Trigger phrase detection and mode switching
-- `cc_sessions/hooks/workflow_manager.py` - Implementation mode reminders (PostToolUse)
+- `cc_sessions/hooks/workflow_manager.py` - Implementation mode reminders (artaPostToolUse)
 - `cc_sessions/scripts/daic.cmd` - Windows Command Prompt daic command
 - `cc_sessions/scripts/daic.ps1` - Windows PowerShell daic command
 - `cc_sessions/agents/logging.md` - Session work log consolidation agent
@@ -27,6 +29,7 @@ The framework includes persistent task management with git branch enforcement, c
 - `pyproject.toml` - Package configuration with console script entry points
 
 ## Installation Methods
+
 - `pipx install cc-sessions` - Isolated Python install (recommended)
 - `npm install -g cc-sessions` - Global npm install
 - `pip install cc-sessions` - Direct pip install
@@ -35,28 +38,48 @@ The framework includes persistent task management with git branch enforcement, c
 ## Core Features
 
 ### DAIC Enforcement
+
 - Blocks Edit/Write/MultiEdit tools in discussion mode
 - Requires explicit trigger phrases to enter implementation mode
 - Configurable trigger phrases via `/add-trigger` command
 - Read-only Bash commands allowed in discussion mode
 
 ### Task Management
+
 - Priority-prefixed tasks: h- (high), m- (medium), l- (low), ?- (investigate)
 - Automatic git branch creation and enforcement
 - Persistent context across session restarts
 - Work log consolidation and cleanup
 
 ### Branch Enforcement
+
 - Task-to-branch mapping: implement- → feature/, fix- → fix/, etc.
 - Blocks code edits if current branch doesn't match task requirements
 - Four failure modes: wrong branch, no branch, task missing, branch missing
 
 ### Context Preservation
+
 - Automatic context compaction at 75%/90% token usage
 - Session restart with full task context loading
 - Specialized agents operate in separate contexts
 
+### Verbose Command Policy
+
+- Never run build or build-and-deploy commands directly in the main chat without first confirming they won't be verbose.
+- Default behavior for potentially noisy commands (build, test, deploy, package, CI steps):
+  - Prefer dry-run/plan/preview modes first (e.g., `--dry-run`, `plan`, `--check`).
+  - Use quiet/silent flags where available (e.g., `--quiet`, `--silent`, `-q`).
+  - Redirect full output to a file under `.claude/state/logs/` and only return a short summary with the file path.
+- Before executing, state the intended command and estimated output size; ask for approval if output may exceed a few hundred lines or 300 tokens.
+- If full logs are requested, write them to files and link paths; do not paste large logs into chat.
+- Examples (adapt per stack):
+  - JS: `npm run build --silent` / `pnpm -s build` / `nx build --silent` (log to file)
+  - Java: `mvn -q package` / `gradle -q build` (log to file)
+  - IaC: `terraform plan` / `helm upgrade --dry-run` / `serverless deploy --no-verbose`
+  - Others: add `--quiet`/`--dry-run` equivalents and log redirection
+
 ### Specialized Agents
+
 - **context-gathering**: Creates comprehensive task context manifests
 - **logging**: Consolidates work logs with cleanup and chronological ordering
 - **code-review**: Reviews implementations for quality and patterns
@@ -66,12 +89,14 @@ The framework includes persistent task management with git branch enforcement, c
 ## Integration Points
 
 ### Consumes
+
 - Claude Code hooks system for behavioral enforcement
 - Git for branch management and enforcement
 - Python 3.8+ with tiktoken for token counting
 - Shell environment for command execution (Bash/PowerShell/Command Prompt)
 
 ### Provides
+
 - `/add-trigger` - Dynamic trigger phrase configuration
 - `daic` - Manual mode switching command
 - Hook-based tool blocking and behavioral enforcement
@@ -81,6 +106,7 @@ The framework includes persistent task management with git branch enforcement, c
 ## Configuration
 
 Primary configuration in `sessions/sessions-config.json`:
+
 - `developer_name` - How Claude addresses the user
 - `trigger_phrases` - Phrases that switch to implementation mode
 - `blocked_tools` - Tools blocked in discussion mode
@@ -88,10 +114,12 @@ Primary configuration in `sessions/sessions-config.json`:
 - `task_detection.enabled` - Enable/disable task-based workflows
 
 State files in `.claude/state/`:
+
 - `current_task.json` - Active task metadata
 - `daic-mode.json` - Current discussion/implementation mode
 
 Windows-specific configuration in `.claude/settings.json`:
+
 - Hook commands use Windows-style paths with `%CLAUDE_PROJECT_DIR%`
 - Python interpreter explicitly specified for `.py` hook execution
 - Native `.cmd` and `.ps1` script support for daic command
@@ -99,6 +127,7 @@ Windows-specific configuration in `.claude/settings.json`:
 ## Key Patterns
 
 ### Hook Architecture
+
 - Pre-tool-use/Post-tool-use handled by `workflow_manager.py`
 - User message hooks for trigger detection (`user_messages.py`)
 - Session start hooks for context loading (`session_start.py`)
@@ -107,24 +136,28 @@ Windows-specific configuration in `.claude/settings.json`:
 - Windows-specific command prefixing with explicit python interpreter
 
 ### Agent Delegation
+
 - Heavy file operations delegated to specialized agents
 - Agents receive full conversation transcript for context
 - Agent results returned to main conversation thread
 - Agent state isolated in separate context windows
 
 ### Task Structure
+
 - Markdown files with standardized sections (Purpose, Context, Success Criteria, Work Log)
 - Directory-based tasks for complex multi-phase work
 - File-based tasks for focused single objectives
 - Automatic branch mapping from task naming conventions
 
 ### Subagent Protection
+
 - Detection mechanism prevents DAIC reminders in subagent contexts
 - Subagents blocked from editing .claude/state files
 - Strict separation between main thread and agent operations
 - Subagent context is tracked in `.claude/state/subagent_state.json` (per-session counters) rather than a single flag file
 
 ### Windows Compatibility
+
 - Platform detection using `os.name == 'nt'` (Python) and `process.platform === 'win32'` (Node.js)
 - File operations skip Unix permissions on Windows (no chmod calls)
 - Command detection handles Windows executable extensions (.exe, .bat, .cmd)
@@ -135,12 +168,14 @@ Windows-specific configuration in `.claude/settings.json`:
 ## Package Structure
 
 ### Installation Variants
+
 - Python package with pip/pipx/uv support
 - NPM package wrapper for JavaScript environments
 - Direct bash script for build-from-source installations
 - Cross-platform compatibility (macOS, Linux, Windows 10/11)
 
 ### Template System
+
 - Task templates for consistent structure
 - CLAUDE.sessions.md behavioral template
 - Protocol markdown files for complex workflows
@@ -149,18 +184,21 @@ Windows-specific configuration in `.claude/settings.json`:
 ## Quality Assurance Features
 
 ### Context Management
+
 - Token counting and usage warnings at 75%/90% thresholds
 - Automatic context compaction protocols
 - State preservation across session boundaries
 - Clean task file maintenance through logging agent
 
 ### Work Quality
+
 - Mandatory discussion before implementation
 - Code review agent for quality checks
 - Pattern consistency through context gathering
 - Branch enforcement prevents wrong-branch commits
 
 ### Process Integrity
+
 - Hook-based enforcement cannot be bypassed
 - State file protection from unauthorized changes
 - Chronological work log maintenance

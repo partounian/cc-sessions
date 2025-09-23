@@ -82,6 +82,11 @@ if not clean_transcript:
 task_call = clean_transcript[-1]
 subagent_type = _extract_subagent_type(task_call)
 
+# Add the cc_sessions directory to the path
+import os
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 # Get project root using shared_state
 from shared_state import get_project_root, get_shared_state
 PROJECT_ROOT = get_project_root()
@@ -92,8 +97,20 @@ def cleanup_old_transcript_chunks(batch_dir: Path) -> None:
     if not batch_dir.exists():
         return
 
-    chunk_files = sorted(batch_dir.glob("current_transcript_*.json"),
-                        key=lambda f: f.stat().st_mtime, reverse=True)
+    # Gather files with safe stat to avoid races on broken symlinks/deleted files
+    chunk_entries = []
+    for f in batch_dir.glob("current_transcript_*.json"):
+        try:
+            mtime = f.stat().st_mtime
+            chunk_entries.append((mtime, f))
+        except FileNotFoundError:
+            # The file may have disappeared or be a broken symlink; skip
+            continue
+        except OSError:
+            # Skip unreadable entries
+            continue
+
+    chunk_files = [f for _, f in sorted(chunk_entries, key=lambda t: t[0], reverse=True)]
 
     # Keep only last 20 chunks, delete the rest
     for old_chunk in chunk_files[20:]:
@@ -111,8 +128,13 @@ cleanup_old_transcript_chunks(BATCH_DIR)
 
 target_dir = BATCH_DIR
 for item in target_dir.iterdir():
-    if item.is_file():
-        item.unlink()
+    try:
+        # Remove regular files and broken symlinks
+        if item.is_file() or item.is_symlink():
+            item.unlink()
+    except Exception:
+        # Best-effort cleanup
+        pass
 
 # Record entering subagent context with session id for robust tracking
 session_id = input_data.get('session_id') or 'default'

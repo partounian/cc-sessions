@@ -17,6 +17,15 @@ def setup_project(tmp: Path) -> None:
 
 def test_precompact_creates_summaries(tmp_path: Path):
     setup_project(tmp_path)
+    # Write a current task to ensure manifest gets proper names
+    state_dir = tmp_path / ".claude" / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    (state_dir / "current_task.json").write_text(json.dumps({
+        "task": "m-example",
+        "branch": "feature/m-example",
+        "services": ["app"],
+        "updated": "2025-01-01"
+    }))
     payload = {"hookEventName": "PreCompact"}
     res = run_hook(tmp_path, payload)
     assert res.returncode == 0
@@ -26,5 +35,12 @@ def test_precompact_creates_summaries(tmp_path: Path):
     assert (comp_dir / "workflow_state_summary.json").exists()
     assert (comp_dir / "task_context_summary.json").exists()
     assert (comp_dir / "context_manifest.json").exists()
+    # verify manifest has non-unknown resume hints
+    manifest = json.loads((comp_dir / "context_manifest.json").read_text())
+    hints = manifest.get("recovery_instructions", [])
+    assert any("Continue with task: m-example" in h for h in hints)
+    # phase should be set to discussion/implementation, not 'unknown'
+    phase = manifest.get("workflow_state", {}).get("current_phase")
+    assert phase in ("discussion", "implementation")
 
 

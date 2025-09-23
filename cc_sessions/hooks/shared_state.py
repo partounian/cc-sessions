@@ -59,6 +59,7 @@ class SharedState:
         self.error_log_file = self.state_dir / "error_log.json"
         self.workflow_events_file = self.state_dir / "workflow_events.json"
         self.subagent_state_file = self.state_dir / "subagent_state.json"
+        self.daic_cooldown_file = self.state_dir / "daic-cooldown.json"
 
         # Ensure directories exist
         self._ensure_directories()
@@ -392,6 +393,20 @@ class SharedState:
 
         with open(self.daic_state_file, 'w') as f:
             json.dump({"mode": mode}, f, indent=2)
+
+        # When switching to implementation, start a cooldown window
+        if mode == "implementation":
+            try:
+                from datetime import datetime, timedelta
+                cooldown_seconds = 300  # default 5 minutes
+                # Allow override via sessions-config.json
+                config = self._load_sessions_config()
+                cooldown_seconds = int(config.get('daic', {}).get('cooldown_seconds', cooldown_seconds))
+                expires_at = (datetime.now() + timedelta(seconds=cooldown_seconds)).isoformat()
+                with open(self.daic_cooldown_file, 'w') as f:
+                    json.dump({"expires_at": expires_at, "seconds": cooldown_seconds}, f, indent=2)
+            except Exception:
+                pass
         return name
 
     def toggle_daic_mode(self) -> str:
@@ -412,6 +427,21 @@ class SharedState:
 
         # Return appropriate message
         return self._get_daic_mode_message(new_mode)
+
+    def is_in_cooldown(self) -> bool:
+        """Return True if within implementation cooldown window."""
+        try:
+            if not self.daic_cooldown_file.exists():
+                return False
+            from datetime import datetime
+            with open(self.daic_cooldown_file, 'r') as f:
+                data = json.load(f)
+            exp = data.get('expires_at')
+            if not exp:
+                return False
+            return datetime.now() < datetime.fromisoformat(exp)
+        except Exception:
+            return False
 
     def _get_daic_mode_message(self, mode: str) -> str:
         """Get DAIC mode message for the given mode."""
@@ -776,8 +806,8 @@ class SharedState:
 
     def update_compaction_metadata(self, metadata: Dict[str, Any]) -> None:
         """Update compaction metadata (compatibility method)"""
-        # In a real implementation, this would update compaction metadata
-        pass
+        # Intentionally a no-op now; we rely on task-file checkpoints instead
+        return None
 
     def _ensure_state_dir(self) -> None:
         """Ensure the state directory exists."""

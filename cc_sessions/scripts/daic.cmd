@@ -16,8 +16,8 @@ echo [DAIC Error] Could not find .claude directory in current path or parent dir
 exit /b 1
 
 :found_claude
-REM Find the hooks directory
-set HOOKS_DIR=%PROJECT_ROOT%\.claude\hooks
+REM Find the cc_sessions directory (parent of hooks)
+for %%I in ("%PROJECT_ROOT%\.claude\hooks") do set CC_SESSIONS_DIR=%%~dpI
 
 REM Check if Python is available as python or python3
 where python >nul 2>nul
@@ -34,4 +34,4 @@ if %errorlevel% equ 0 (
 )
 
 REM Run Python inline to toggle mode
-%PYTHON_CMD% -c "import sys; sys.path.insert(0, r'%HOOKS_DIR%'); from shared_state import toggle_daic_mode; mode = toggle_daic_mode(); print('[DAIC] ' + mode)"
+%PYTHON_CMD% -c "import sys; sys.path.insert(0, r'%CC_SESSIONS_DIR%'); from hooks.shared_state import toggle_daic_mode; mode = toggle_daic_mode(); print('[DAIC] ' + mode)"

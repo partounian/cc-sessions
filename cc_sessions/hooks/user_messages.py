@@ -4,6 +4,7 @@ import json
 import sys
 import re
 import os
+
 try:
     import tiktoken
 except ImportError:
@@ -176,6 +177,16 @@ if any(phrase in prompt_lower for phrase in ["create a new task", "create a task
 # Task switching detection
 if any(phrase in prompt_lower for phrase in ["switch to task", "work on task", "change to task"]):
     context += "If the user is asking to switch tasks, read and follow sessions/protocols/task-startup.md protocol.\n"
+
+# Output guards for verbose maintenance agents (logging/context)
+if any(key in prompt_lower for key in ["logging", "log work", "context-refinement", "context gathering", "context-gathering", "service-documentation"]):
+    context += (
+        "\n[Output Guard]\n"
+        "When running maintenance agents, DO NOT paste long raw outputs into the main chat.\n"
+        "- Write full details to files under .claude/state or sessions/tasks and link them.\n"
+        "- Return a concise bullet summary (<= 10 bullets, <= 300 tokens).\n"
+        "- If content exceeds limits, summarize further and provide file paths.\n"
+    )
 
 # Task detection patterns (optional feature)
 if config.get("task_detection", {}).get("enabled", True):

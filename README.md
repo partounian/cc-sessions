@@ -549,32 +549,21 @@ cc-sessions                      # Run in your project
 **Pip/Pipx/UV** (Pythonistas):
 
 ```bash
-# Using UV (recommended)
-git clone https://github.com/GWUDCAP/cc-sessions
-cd cc-sessions
-uv sync                          # Install dependencies
+pipx install cc-sessions         # Isolated install (recommended)
 cd your-broken-project
-uv run python /path/to/cc-sessions/cc_sessions/install.py
-
-# Using pipx
-pipx install cc-sessions
-cd your-broken-project
-cc-sessions
-
-# Using pip
-pip install cc-sessions
-cd your-broken-project
-cc-sessions
+cc-sessions                      # Run the installer
+# or
+pip install cc-sessions          # Regular pip
+# or
+uv pip install cc-sessions       # UV package manager
 ```
 
 **Direct Bash** ('build from source' gigachads):
 
 ```bash
 git clone https://github.com/GWUDCAP/cc-sessions
-cd cc-sessions
-python cc_sessions/install.py --help  # See installation options
 cd your-broken-project
-python /path/to/cc-sessions/cc_sessions/install.py
+/path/to/cc-sessions/install.sh
 ```
 
 The installer asks you:
@@ -590,14 +579,12 @@ That's it. Restart Claude Code. You're done.
 
 You now have:
 
-- **8 consolidated hooks** that enforce discussion before implementation
-- **State management** that persists between sessions with multi-repo support
-- **Task management** that actually works across multiple repositories
-- **Workspace awareness** for coordinated multi-repo development
-- **Branch enforcement** that prevents editing wrong branches
-- **Context optimization** with intelligent token management
-- **Subagent coordination** with proper context sharing
-- **Session analytics** and performance monitoring
+- Hooks that enforce discussion before implementation
+- State that persists between sessions
+- Task management that actually works
+- Agents that aren't completely useless
+- Git branch enforcement
+- Token warnings before death
 - A chance at maintaining this code in 6 months
 
 ### 🎯 Your First Task
@@ -634,21 +621,11 @@ Sessions is built to be modified. You can use Claude Code itself to improve Sess
 Sessions comes with knowledge files that explain its own architecture:
 
 ```
-cc_sessions/
-├── hooks/                    # 8 consolidated hook files
-│   ├── workflow_manager.py   # DAIC enforcement & branch consistency
-│   ├── context_manager.py    # Context preservation & optimization
-│   ├── session_lifecycle.py  # Session analytics & cleanup
-│   ├── session_start.py      # Session initialization & workspace setup
-│   ├── task_transcript_link.py # Subagent context management
-│   ├── user_messages.py      # DAIC trigger detection
-│   └── shared_state.py       # State management
-├── knowledge/claude-code/
-│   ├── hooks-reference.md    # How hooks work and can be modified
-│   ├── subagents.md          # Agent capabilities and customization
-│   ├── tool-permissions.md   # Tool blocking configuration
-│   └── slash-commands.md     # Command system reference
-└── protocols/                # Workflow protocols and procedures
+sessions/knowledge/claude-code/
+├── hooks-reference.md     # How hooks work and can be modified
+├── subagents.md          # Agent capabilities and customization
+├── tool-permissions.md   # Tool blocking configuration
+└── slash-commands.md     # Command system reference
 ```
 
 ### Modifying Behaviors
@@ -663,11 +640,10 @@ modify the DAIC enforcement to allow Bash commands in discussion mode
 Claude can:
 
 - Adjust trigger phrases in `sessions/sessions-config.json`
-- Modify hook behaviors in `.claude/hooks/` (copies from `cc_sessions/hooks/`)
+- Modify hook behaviors in `.claude/hooks/`
 - Update protocols in `sessions/protocols/`
 - Create new agents in `.claude/agents/`
 - Customize task templates
-- Modify the consolidated hook logic in `cc_sessions/hooks/`
 
 ### Common Customizations
 

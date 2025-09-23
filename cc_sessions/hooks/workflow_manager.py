@@ -19,10 +19,14 @@ Key features:
 """
 
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+# Add the cc_sessions directory to the path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from shared_state import (check_daic_mode_bool, get_project_root,
                           get_task_state, set_daic_mode, get_shared_state)
@@ -377,8 +381,15 @@ def main():
                 log_tool_event(tool_name, tool_input, False, reason='blocked_daic_command')
                 sys.exit(2)  # Block with feedback
 
-        # Block configured tools in discussion mode (except task selection)
-        if discussion_mode and tool_name in config.get("blocked_tools", DEFAULT_CONFIG["blocked_tools"]):
+        # Respect implementation cooldown: if recently switched, allow tools even if file suggests discussion
+        in_cooldown = False
+        try:
+            in_cooldown = get_shared_state().is_in_cooldown()
+        except Exception:
+            in_cooldown = False
+
+        # Block configured tools in discussion mode (except task selection). If in cooldown, don't block.
+        if (discussion_mode and not in_cooldown) and tool_name in config.get("blocked_tools", DEFAULT_CONFIG["blocked_tools"]):
             # Allow task selection operations even in DAIC mode
             if tool_name == "Edit" and "current_task.json" in tool_input.get("path", ""):
                 pass  # Allow task selection
