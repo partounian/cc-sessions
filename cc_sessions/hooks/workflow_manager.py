@@ -69,6 +69,62 @@ DEFAULT_CONFIG = {
     ]
 }
 
+# Commands likely to produce large output
+VERBOSE_COMMAND_PATTERNS = [
+    r"\bnpm\s+run\s+build\b",
+    r"\bnpm\s+run\s+deploy\b",
+    r"\bnpm\s+build\b",
+    r"\bnpm\s+deploy\b",
+    r"\bpnpm\s+(run\s+)?build\b",
+    r"\bpnpm\s+(run\s+)?deploy\b",
+    r"\byarn\s+(run\s+)?build\b",
+    r"\byarn\s+(run\s+)?deploy\b",
+    r"\bdeploy\.sh\b",
+]
+
+QUIET_HINT_MARKERS = [
+    "--quiet",
+    "--silent",
+    "--dry-run",
+    "--check",
+]
+
+
+def is_potentially_verbose_command(command: str) -> bool:
+    cmd_lower = command.lower()
+    for pattern in VERBOSE_COMMAND_PATTERNS:
+        if re.search(pattern, cmd_lower):
+            return True
+    return False
+
+
+def has_output_controls(command: str) -> bool:
+    cmd_lower = command.lower()
+    if any(marker in cmd_lower for marker in QUIET_HINT_MARKERS):
+        return True
+    if any(token in command for token in [">", ">>", "2>", "| tee", "|tee"]):
+        return True
+    return False
+
+
+def guard_verbose_command(command: str) -> bool:
+    if not is_potentially_verbose_command(command):
+        return False
+    if has_output_controls(command):
+        return False
+
+    log_path = ".claude/state/logs/verbose-command.log"
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    print("[Verbose Command Guard] This command is likely to flood the chat.", file=sys.stderr)
+    print("Please re-run it with quiet/dry-run flags or redirect output, e.g.:", file=sys.stderr)
+    print(f"  {command} > {log_path} 2>&1", file=sys.stderr)
+    print("Then summarize the results (<=300 tokens) and reference the log path.", file=sys.stderr)
+    try:
+        get_shared_state().log_warning(f"Verbose command blocked: {command}")
+    except Exception:
+        pass
+    return True
+
 def get_hook_event_name(input_data: dict) -> str:
     """Return the hook event name from runner input.
 
@@ -363,6 +419,10 @@ def main():
         # For Bash commands, check if it's a read-only operation
         if tool_name == "Bash":
             command = tool_input.get("command", "").strip()
+
+            if guard_verbose_command(command):
+                log_tool_event(tool_name, tool_input, False, reason='verbose_command_guard')
+                sys.exit(2)
 
             if is_read_only_bash_command(command, config):
                 # Allow read-only commands without checks

@@ -33,7 +33,17 @@ except Exception:
     config = {}
 
 # Default trigger phrases if not configured
-DEFAULT_TRIGGER_PHRASES = ["make it so", "run that", "yert"]
+DEFAULT_TRIGGER_PHRASES = [
+    "make it so",
+    "run that",
+    "yert",
+    "go ahead",
+    "lets continue",
+    "let's continue",
+    "continue with that",
+    "proceed",
+    "implement it",
+]
 trigger_phrases = config.get("trigger_phrases", DEFAULT_TRIGGER_PHRASES)
 
 # Check if this is an /add-trigger command

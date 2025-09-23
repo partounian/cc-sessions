@@ -42,6 +42,22 @@ def test_bash_read_only_allows_ls(tmp_path: Path):
     assert result.returncode == 0
 
 
+def test_verbose_guard_blocks_npm_build(tmp_path: Path):
+    setup_project(tmp_path)
+    payload = {"tool_name": "Bash", "tool_input": {"command": "npm run build"}}
+    result = run_hook(tmp_path, payload)
+    assert result.returncode == 2
+    assert "Verbose Command Guard" in (result.stderr or "")
+
+
+def test_verbose_guard_blocks_deploy_script(tmp_path: Path):
+    setup_project(tmp_path)
+    payload = {"tool_name": "Bash", "tool_input": {"command": "./deploy.sh"}}
+    result = run_hook(tmp_path, payload)
+    assert result.returncode == 2
+    assert "Verbose Command Guard" in (result.stderr or "")
+
+
 def test_subagent_boundary_blocks_state_edits(tmp_path: Path):
     setup_project(tmp_path)
     # Simulate subagent active using shared state tracker file
