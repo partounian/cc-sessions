@@ -27,6 +27,22 @@ def setup_project(tmp: Path) -> None:
     (tmp / ".claude" / "state" / "daic-mode.json").write_text(json.dumps({"mode": "discussion"}))
 
 
+def read_error_messages(tmp: Path) -> list[str]:
+    log_file = tmp / ".claude" / "state" / "error_log.json"
+    if not log_file.exists():
+        return []
+    messages = []
+    for line in log_file.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            messages.append(json.loads(line).get("message", ""))
+        except json.JSONDecodeError:
+            continue
+    return messages
+
+
 def test_daic_blocks_edit(tmp_path: Path):
     setup_project(tmp_path)
     payload = {"tool_name": "Edit", "tool_input": {"file_path": "app.py"}}
@@ -128,6 +144,19 @@ def test_cooldown_allows_tools_after_switch(tmp_path: Path):
     result = run_hook(tmp_path, payload)
     # Should be allowed (exit 0) or pass through with reminder codes
     assert result.returncode in (0,)
+
+
+def test_workflow_manager_logs_bad_config(tmp_path: Path):
+    setup_project(tmp_path)
+    config_file = tmp_path / "sessions" / "sessions-config.json"
+    config_file.write_text("{ invalid json }")
+
+    payload = {"tool_name": "Bash", "tool_input": {"command": "ls"}}
+    result = run_hook(tmp_path, payload)
+    assert result.returncode == 0
+
+    messages = read_error_messages(tmp_path)
+    assert any("Failed to load workflow config" in msg for msg in messages)
 
 
 

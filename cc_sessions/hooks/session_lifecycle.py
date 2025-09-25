@@ -52,8 +52,8 @@ class SessionLifecycleManager:
             # Clear lingering subagent state at session stop/end
             try:
                 self.shared_state.clear_subagent_state()
-            except Exception:
-                pass
+            except Exception as exc:
+                self._log_warning(f"clear_subagent_state failed: {exc}")
 
             # Collect session metrics
             self._collect_session_metrics()
@@ -663,31 +663,49 @@ class SessionLifecycleManager:
 
     def _cleanup_agent_contexts(self) -> None:
         """Enhanced agent context cleanup with better memory management"""
+        agent_context_dir = Path('.claude/state/agent_context')
+
+        if not agent_context_dir.exists():
+            return
+
         try:
-            agent_context_dir = Path('.claude/state/agent_context')
-            if agent_context_dir.exists():
-                for agent_type_dir in agent_context_dir.iterdir():
-                    if agent_type_dir.is_dir():
-                        # Clean up temporary files
-                        for temp_file in agent_type_dir.glob('temp_*'):
-                            temp_file.unlink()
-
-                        # Enhanced chunk cleanup: keep last 10, delete older
-                        chunk_files = sorted(agent_type_dir.glob('chunk_*.json'),
-                                           key=lambda f: f.stat().st_mtime, reverse=True)
-                        for old_chunk in chunk_files[10:]:  # Keep last 10
-                            try:
-                                old_chunk.unlink()
-                            except Exception:
-                                pass  # Silent failure
-
-                        # Clean up old session data (older than 7 days)
-                        self._cleanup_old_session_data(agent_type_dir)
+            for agent_dir in agent_context_dir.iterdir():
+                if not agent_dir.is_dir():
+                    continue
+                self._cleanup_agent_directory(agent_dir)
 
             self._log_info("Agent context cleanup completed")
+        except Exception as exc:
+            self._log_error(f"Error cleaning up agent contexts: {exc}")
 
-        except Exception as e:
-            self._log_error(f"Error cleaning up agent contexts: {e}")
+    def _cleanup_agent_directory(self, agent_dir: Path) -> None:
+        """Remove transient files for a single agent directory."""
+        try:
+            self._remove_temp_files(agent_dir)
+            self._prune_agent_chunks(agent_dir)
+            self._cleanup_old_session_data(agent_dir)
+        except Exception as exc:
+            self._log_warning(f"Agent cleanup failed for {agent_dir}: {exc}")
+
+    def _remove_temp_files(self, agent_dir: Path) -> None:
+        for temp_file in agent_dir.glob('temp_*'):
+            try:
+                temp_file.unlink()
+            except Exception as exc:
+                self._log_warning(f"Failed to remove temp file {temp_file}: {exc}")
+
+    def _prune_agent_chunks(self, agent_dir: Path) -> None:
+        chunk_files = sorted(
+            agent_dir.glob('chunk_*.json'),
+            key=lambda file_path: file_path.stat().st_mtime,
+            reverse=True,
+        )
+
+        for old_chunk in chunk_files[10:]:  # Keep last 10
+            try:
+                old_chunk.unlink()
+            except Exception as exc:
+                self._log_warning(f"Failed to remove agent chunk {old_chunk}: {exc}")
 
     def _cleanup_old_session_data(self, agent_dir: Path) -> None:
         """Clean up agent data older than 7 days"""
@@ -698,41 +716,89 @@ class SessionLifecycleManager:
                 if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
                     try:
                         file_path.unlink()
-                    except Exception:
-                        pass  # Silent failure
-        except Exception:
-            pass  # Silent failure
+                    except Exception as exc:
+                        self._log_warning(f"Failed to remove old agent file {file_path}: {exc}")
+        except Exception as exc:
+            self._log_warning(f"_cleanup_old_session_data failed for {agent_dir}: {exc}")
 
     def _trigger_memory_cleanup(self) -> None:
         """Trigger memory cleanup and garbage collection"""
         try:
-            import gc
-
             # Log memory usage before cleanup
-            memory_before = self.shared_state.get_memory_usage()
-            self._log_info(f"Memory before cleanup: {memory_before.get('rss_mb', 0):.1f}MB")
+            memory_before = self._safe_get_memory_usage()
+            if memory_before:
+                self._log_info(f"Memory before cleanup: {memory_before.get('rss_mb', 0):.1f}MB")
 
             # Trigger garbage collection
-            gc_stats = self.shared_state.trigger_garbage_collection()
-            self._log_info(f"Garbage collection: {gc_stats.get('collected_objects', 0)} objects collected")
+            gc_stats = self._safe_trigger_gc()
+            if gc_stats:
+                self._log_info(f"Garbage collection: {gc_stats.get('collected_objects', 0)} objects collected")
 
             # Log memory usage after cleanup
-            memory_after = self.shared_state.get_memory_usage()
-            self._log_info(f"Memory after cleanup: {memory_after.get('rss_mb', 0):.1f}MB")
+            memory_after = self._safe_get_memory_usage()
+            if memory_after:
+                self._log_info(f"Memory after cleanup: {memory_after.get('rss_mb', 0):.1f}MB")
 
             # Log memory usage for monitoring
-            self.shared_state.log_memory_usage()
+            self._safe_log_memory_usage()
 
         except Exception as e:
             self._log_error(f"Error in memory cleanup: {e}")
+
+    def _safe_get_memory_usage(self) -> Optional[Dict[str, Any]]:
+        try:
+            return self.shared_state.get_memory_usage()
+        except Exception as exc:
+            self._log_warning(f"get_memory_usage failed: {exc}")
+            return None
+
+    def _safe_trigger_gc(self) -> Optional[Dict[str, Any]]:
+        try:
+            return self.shared_state.trigger_garbage_collection()
+        except Exception as exc:
+            self._log_warning(f"trigger_garbage_collection failed: {exc}")
+            return None
+
+    def _safe_log_memory_usage(self) -> None:
+        try:
+            self.shared_state.log_memory_usage()
+        except Exception as exc:
+            self._log_warning(f"log_memory_usage failed: {exc}")
+
+    def _safe_get_current_task(self) -> Dict[str, Any]:
+        try:
+            return self.shared_state.get_current_task()
+        except Exception as exc:
+            self._log_warning(f"get_current_task failed: {exc}")
+            return {}
+
+    def _safe_get_daic_mode(self) -> str:
+        try:
+            return self.shared_state.get_daic_mode()
+        except Exception as exc:
+            self._log_warning(f"get_daic_mode failed: {exc}")
+            return "unknown"
+
+    def _safe_get_enforcement_state(self) -> Dict[str, Any]:
+        try:
+            return self.shared_state.get_enforcement_state()
+        except Exception as exc:
+            self._log_warning(f"get_enforcement_state failed: {exc}")
+            return {}
+
+    def _safe_update_current_task(self, task: Dict[str, Any]) -> None:
+        try:
+            self.shared_state.update_current_task(task)
+        except Exception as exc:
+            self._log_warning(f"update_current_task failed: {exc}")
 
     def _persist_final_state(self) -> None:
         """Persist final state to ensure no data loss"""
         try:
             # Get current state
-            current_task = self.shared_state.get_current_task()
-            daic_mode = self.shared_state.get_daic_mode()
-            enforcement_state = self.shared_state.get_enforcement_state()
+            current_task = self._safe_get_current_task()
+            daic_mode = self._safe_get_daic_mode()
+            enforcement_state = self._safe_get_enforcement_state()
 
             # Create final state snapshot
             final_state = {
@@ -753,7 +819,7 @@ class SessionLifecycleManager:
             if current_task:
                 current_task['session_completed'] = True
                 current_task['completion_time'] = self._get_timestamp()
-                self.shared_state.update_current_task(current_task)
+                self._safe_update_current_task(current_task)
 
             self._log_info("Final state persisted successfully")
 
@@ -900,7 +966,8 @@ class SessionLifecycleManager:
         """Get session start time from shared state"""
         try:
             return self.shared_state.get_session_start_time()
-        except:
+        except Exception as exc:
+            self._log_warning(f"get_session_start_time failed: {exc}")
             return None
 
     def _calculate_session_duration(self) -> float:
@@ -912,7 +979,8 @@ class SessionLifecycleManager:
                 duration = (datetime.now() - start_dt).total_seconds()
                 return duration
             return 0.0
-        except:
+        except Exception as exc:
+            self._log_warning(f"calculate_session_duration failed: {exc}")
             return 0.0
 
     def _get_timestamp(self) -> str:

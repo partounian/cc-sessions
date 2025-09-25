@@ -920,7 +920,12 @@ class SessionsInstaller:
 
         except Exception as e:
             print(color(f"❌ Installation failed: {e}", Colors.RED))
-            sys.exit(1)
+            try:
+                from hooks.shared_state import get_shared_state
+                get_shared_state().log_error(f"install: {e}")
+            except Exception:
+                pass
+            raise
 
 def main() -> None:
     """

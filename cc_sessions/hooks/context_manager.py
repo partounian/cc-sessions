@@ -31,6 +31,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hooks.shared_state import SharedState
 
 
+def _log_fallback(message: str) -> None:
+    print(f"WARNING: context_manager: {message}", file=sys.stderr)
+
+
 class ContextManager:
     """Manages context preservation, notifications, and optimization"""
 
@@ -108,16 +112,13 @@ class ContextManager:
             }
 
             # Log compaction event
-            try:
-                self.shared_state.log_context_usage({
-                    'tokens_used': 0,
-                    'timestamp': self._get_timestamp(),
-                    'peak_usage': 0,
-                    'warning_triggered': False,
-                    'compaction_triggered': True
-                })
-            except Exception:
-                pass
+            self._log_context_usage({
+                'tokens_used': 0,
+                'timestamp': self._get_timestamp(),
+                'peak_usage': 0,
+                'warning_triggered': False,
+                'compaction_triggered': True
+            })
 
             return result
 
@@ -168,10 +169,7 @@ class ContextManager:
             task_file.write_text(text)
         except Exception as e:
             # Best-effort logging only
-            try:
-                self._log_warning(f"Could not append checkpoint to task file: {e}")
-            except Exception:
-                pass
+            self._log_warning(f"Could not append checkpoint to task file: {e}")
 
     def _handle_notification(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Handle different types of notifications"""
@@ -346,7 +344,7 @@ class ContextManager:
                         agent_context['agent_results'][agent_type] = agent_results
 
             # Extract context requirements from shared state
-            current_task = self.shared_state.get_current_task()
+            current_task = self._safe_get_current_task()
             if current_task:
                 agent_context['context_requirements'] = {
                     'current_task': current_task,
@@ -443,11 +441,12 @@ class ContextManager:
             try:
                 is_discussion = self.shared_state.check_daic_mode_bool()
                 workflow_state['daic_mode'] = 'discussion' if is_discussion else 'implementation'
-            except Exception:
+            except Exception as exc:
+                self._log_warning(f"check_daic_mode_bool failed: {exc}")
                 workflow_state['daic_mode'] = 'unknown'
 
             # Get current task
-            current_task = self.shared_state.get_current_task()
+            current_task = self._safe_get_current_task()
             if current_task:
                 # Prefer explicit phase, else inferred from DAIC
                 phase = current_task.get('phase')
@@ -464,7 +463,7 @@ class ContextManager:
                 }
 
             # Get enforcement state
-            enforcement_state = self.shared_state.get_enforcement_state()
+            enforcement_state = self._safe_get_enforcement_state()
             workflow_state['enforcement_state'] = enforcement_state
 
             return workflow_state
@@ -484,7 +483,7 @@ class ContextManager:
 
         try:
             # Get current task
-            current_task = self.shared_state.get_current_task()
+            current_task = self._safe_get_current_task()
             if current_task:
                 task_context['current_task'] = current_task
 
@@ -688,7 +687,10 @@ class ContextManager:
                 'context_sources': len(manifest.get('agent_context', {}).get('context_requirements', {}).get('context_sources', []))
             }
 
-            self.shared_state.update_compaction_metadata(metadata)
+            try:
+                self.shared_state.update_compaction_metadata(metadata)
+            except Exception as exc:
+                self._log_warning(f"update_compaction_metadata failed: {exc}")
 
         except Exception as e:
             self._log_error(f"Error updating compaction metadata: {e}")
@@ -870,7 +872,7 @@ class ContextManager:
     def _provide_context_aware_response(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Provide context-aware response for ambiguous operations"""
         try:
-            current_task = self.shared_state.get_current_task()
+            current_task = self._safe_get_current_task()
             workflow_phase = current_task.get('phase', 'unknown') if current_task else 'unknown'
 
             # Context-aware decision making
@@ -906,8 +908,8 @@ class ContextManager:
         """Get current context for suggestion generation"""
         try:
             context = {
-                'current_task': self.shared_state.get_current_task(),
-                'daic_mode': self.shared_state.get_daic_mode(),
+                'current_task': self._safe_get_current_task(),
+                'daic_mode': self._safe_get_daic_mode(),
                 'recent_files': self._get_recent_files(),
                 'workflow_phase': 'unknown'
             }
@@ -1056,6 +1058,39 @@ class ContextManager:
     def _log_error(self, message: str) -> None:
         """Log error message"""
         print(f"ERROR: {message}", file=sys.stderr)
+
+    def _safe_get_current_task(self) -> Dict[str, Any]:
+        try:
+            return self.shared_state.get_current_task()
+        except Exception as exc:
+            self._log_warning(f"get_current_task failed: {exc}")
+            return {}
+
+    def _safe_get_daic_mode(self) -> str:
+        try:
+            return self.shared_state.check_daic_mode()
+        except Exception as exc:
+            self._log_warning(f"check_daic_mode failed: {exc}")
+            return "unknown"
+
+    def _safe_get_enforcement_state(self) -> Dict[str, Any]:
+        try:
+            return self.shared_state.get_enforcement_state()
+        except Exception as exc:
+            self._log_warning(f"get_enforcement_state failed: {exc}")
+            return {}
+
+    def _safe_update_current_task(self, task: Dict[str, Any]) -> None:
+        try:
+            self.shared_state.update_current_task(task)
+        except Exception as exc:
+            self._log_warning(f"update_current_task failed: {exc}")
+
+    def _log_context_usage(self, entry: Dict[str, Any]) -> None:
+        try:
+            self.shared_state.log_context_usage(entry)
+        except Exception as exc:
+            self._log_warning(f"Failed to log context usage: {exc}")
 
 
 def main():

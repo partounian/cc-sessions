@@ -28,8 +28,8 @@ def cleanup_old_transcript_chunks(batch_dir: Path) -> None:
     for old_chunk in chunk_files[20:]:
         try:
             old_chunk.unlink()
-        except Exception:
-            pass  # Silent failure, don't break the workflow
+        except Exception as exc:
+            print(f"WARNING: cleanup_old_transcript_chunks failed to remove {old_chunk}: {exc}")
 
 # ============================================================================
 # UNIT TESTS - Test individual functions and components

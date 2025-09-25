@@ -31,6 +31,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shared_state import (check_daic_mode_bool, get_project_root,
                           get_task_state, set_daic_mode, get_shared_state)
 
+
+def _log_warning(message: str) -> None:
+    try:
+        get_shared_state().log_warning(f"workflow_manager: {message}")
+    except Exception:
+        print(f"WARNING: workflow_manager: {message}", file=sys.stderr)
+
 # Load configuration from project's .claude directory
 PROJECT_ROOT = get_project_root()
 CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
@@ -139,8 +146,8 @@ def load_config():
         try:
             with open(CONFIG_FILE, 'r') as f:
                 return json.load(f)
-        except:
-            pass
+        except Exception as exc:
+            _log_warning(f"Failed to load workflow config; using defaults: {exc}")
     return DEFAULT_CONFIG
 
 def find_git_repo(path: Path) -> Path:
@@ -212,8 +219,8 @@ def log_tool_event(tool_name: str, tool_input: dict, success: bool, reason: str 
             'parameters': tool_input,
             'timestamp': None
         })
-    except Exception:
-        pass
+    except Exception as exc:
+        _log_warning(f"log_tool_usage failed: {exc}")
 
 def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
     """Enforce branch consistency for file editing operations."""
@@ -286,8 +293,8 @@ def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
                 print(f"Please run: cd {repo_path.relative_to(project_root)} && git checkout {expected_branch}", file=sys.stderr)
                 try:
                     get_shared_state().log_workflow_event({'type': 'branch_mismatch', 'service': service_name, 'expected': expected_branch, 'actual': current_branch})
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log_warning(f"log_workflow_event failed (branch mismatch): {exc}")
                 return False
             elif not in_task and branch_correct:
                 # Scenario 3: Service not in task but already on correct branch
@@ -295,8 +302,8 @@ def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
                 print(f"Please update the task file to include '{service_name}' in the services list.", file=sys.stderr)
                 try:
                     get_shared_state().log_workflow_event({'type': 'service_not_in_task', 'service': service_name, 'branch': current_branch})
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log_warning(f"log_workflow_event failed (service not in task): {exc}")
                 return False
             else:  # not in_task and not branch_correct
                 # Scenario 4: Service not in task AND on wrong branch
@@ -307,8 +314,8 @@ def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
                 print(f"Then update the task file to include '{service_name}' in the services list.", file=sys.stderr)
                 try:
                     get_shared_state().log_workflow_event({'type': 'service_not_in_task_and_wrong_branch', 'service': service_name, 'expected': expected_branch, 'actual': current_branch})
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log_warning(f"log_workflow_event failed (service not in task + wrong branch): {exc}")
                 return False
         else:
             # Single repo or main repo
@@ -316,8 +323,8 @@ def enforce_branch_consistency(tool_name: str, tool_input: dict, config: dict):
                 print(f"[Branch Mismatch] Repository is on branch '{current_branch}' but task expects '{expected_branch}'. Please checkout the correct branch.", file=sys.stderr)
                 try:
                     get_shared_state().log_workflow_event({'type': 'branch_mismatch', 'service': 'main', 'expected': expected_branch, 'actual': current_branch})
-                except Exception:
-                    pass
+                except Exception as exc:
+                    _log_warning(f"log_workflow_event failed (main branch mismatch): {exc}")
                 return False
 
     except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
@@ -485,8 +492,8 @@ def main():
             from hooks.shared_state import SharedState
             shared_state = SharedState()
             shared_state.log_error(error_msg)
-        except:
-            pass  # If logging fails, continue gracefully
+        except Exception as log_exc:
+            _log_warning(f"Failed to log unexpected error: {log_exc}")
 
         # In case of critical errors, allow tool to proceed rather than blocking completely
         # This prevents the system from becoming completely unusable

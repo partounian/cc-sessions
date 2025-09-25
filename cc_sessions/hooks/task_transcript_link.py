@@ -89,6 +89,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Get project root using shared_state
 from shared_state import get_project_root, get_shared_state
+
+
+def _log_warning(message: str) -> None:
+    try:
+        get_shared_state().log_warning(f"task_transcript_link: {message}")
+    except Exception:
+        print(f"WARNING: task_transcript_link: {message}", file=sys.stderr)
 PROJECT_ROOT = get_project_root()
 
 
@@ -116,8 +123,8 @@ def cleanup_old_transcript_chunks(batch_dir: Path) -> None:
     for old_chunk in chunk_files[20:]:
         try:
             old_chunk.unlink()
-        except Exception:
-            pass  # Silent failure, don't break the workflow
+        except Exception as exc:
+            _log_warning(f"Failed to delete old transcript chunk {old_chunk}: {exc}")
 
 # Clear the current transcript directory
 BATCH_DIR = PROJECT_ROOT / '.claude' / 'state' / subagent_type
@@ -132,16 +139,16 @@ for item in target_dir.iterdir():
         # Remove regular files and broken symlinks
         if item.is_file() or item.is_symlink():
             item.unlink()
-    except Exception:
+    except Exception as exc:
         # Best-effort cleanup
-        pass
+        _log_warning(f"Failed to remove {item}: {exc}")
 
 # Record entering subagent context with session id for robust tracking
 session_id = input_data.get('session_id') or 'default'
 try:
     get_shared_state().enter_subagent(session_id, subagent_type)
-except Exception:
-    pass
+except Exception as exc:
+    _log_warning(f"enter_subagent failed: {exc}")
 
 # Set up token counting
 if tiktoken is not None:

@@ -25,7 +25,32 @@ import sys
 import gc
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
+
+
+def _should_descend(directory: Path, exclude_patterns: List[str]) -> bool:
+    return not (
+        directory.name.startswith('.')
+        or directory.name in exclude_patterns
+        or directory.name in ['node_modules', '__pycache__', '.venv', 'venv', 'build', 'dist']
+    )
+
+
+def _consider_repository(
+    git_directory: Path,
+    repositories: List[Path],
+    exclude_patterns: List[str],
+) -> None:
+    repo_path = git_directory.parent
+    path_str = str(repo_path).lower()
+    should_exclude = any(pattern.lower() in path_str for pattern in exclude_patterns)
+    if not should_exclude and repo_path not in repositories:
+        repositories.append(repo_path)
+
+
+def _fallback_log(message: str) -> None:
+    """Fallback stderr logger used when structured logging fails."""
+    print(f"WARNING: shared_state: {message}", file=sys.stderr)
 
 try:
     import psutil
@@ -146,7 +171,8 @@ class SharedState:
                         if key not in config:
                             config[key] = value
                     return config
-            except Exception:
+            except Exception as exc:
+                _fallback_log(f"load_multi_repo_config failed; using defaults: {exc}")
                 return default_config
 
         return default_config
@@ -159,8 +185,8 @@ class SharedState:
             try:
                 with open(sessions_config_file, 'r') as f:
                     return json.load(f)
-            except Exception:
-                pass
+            except Exception as exc:
+                _fallback_log(f"_load_sessions_config failed; using defaults: {exc}")
 
         # Return default config if file doesn't exist or can't be loaded
         return {
@@ -227,8 +253,16 @@ class SharedState:
                 else:
                     try:
                         existing[key]['active'] = False
-                    except Exception:
-                        existing[key] = {'name': Path(key).name, 'path': key, 'type': 'git', 'description': 'Inactive', 'last_accessed': None, 'active': False}
+                    except Exception as exc:
+                        _fallback_log(f"Failed to mark repository '{key}' inactive: {exc}")
+                        existing[key] = {
+                            'name': Path(key).name,
+                            'path': key,
+                            'type': 'git',
+                            'description': 'Inactive',
+                            'last_accessed': None,
+                            'active': False
+                        }
 
         self.multi_repo_config['repositories'] = existing
         self.save_multi_repo_config()
@@ -279,21 +313,17 @@ class SharedState:
                     if len(repositories) >= max_repos:
                         break
 
-                    if item.is_dir():
-                        if item.name == '.git':
-                            repo_path = item.parent
-                            path_str = str(repo_path).lower()
-                            # Check if this path should be excluded
-                            should_exclude = any(pattern.lower() in path_str for pattern in exclude_patterns)
-                            if not should_exclude:
-                                repositories.append(repo_path)
-                                # Early return if we have enough repositories
-                                if len(repositories) >= max_repos:
-                                    return
-                        elif (not item.name.startswith('.') and
-                              item.name not in exclude_patterns and
-                              item.name not in ['node_modules', '__pycache__', '.venv', 'venv', 'build', 'dist']):
-                            _search_repos_optimized(item, depth + 1)
+                    if not item.is_dir():
+                        continue
+
+                    if item.name == '.git':
+                        _consider_repository(item, repositories, exclude_patterns)
+                        if len(repositories) >= max_repos:
+                            break
+                        continue
+
+                    if _should_descend(item, exclude_patterns):
+                        _search_repos_optimized(item, depth + 1)
             except (PermissionError, OSError):
                 # Skip directories we can't access
                 pass
@@ -572,8 +602,8 @@ class SharedState:
                 with open(self.session_start_file, 'r') as f:
                     data = json.load(f)
                     return data.get('start_time')
-        except Exception:
-            pass
+        except Exception as exc:
+            _fallback_log(f"_load_log_file failed for {log_file}: {exc}")
         return None
 
     def set_session_start_time(self, start_time: str = None) -> None:
@@ -626,8 +656,8 @@ class SharedState:
             if self.subagent_state_file.exists():
                 with open(self.subagent_state_file, 'r') as f:
                     return json.load(f)
-        except Exception:
-            pass
+        except Exception as exc:
+            _fallback_log(f"_load_subagent_state failed: {exc}")
         return {"sessions": {}}
 
     def _save_subagent_state(self, data: Dict[str, Any]) -> None:
@@ -635,8 +665,8 @@ class SharedState:
             self._ensure_state_dir()
             with open(self.subagent_state_file, 'w') as f:
                 json.dump(data, f, indent=2)
-        except Exception:
-            pass
+        except Exception as exc:
+            _fallback_log(f"_save_subagent_state failed: {exc}")
 
     def enter_subagent(self, session_id: str, subagent_type: str = "shared") -> None:
         """Increment subagent counter for a session and type with TTL."""
@@ -684,9 +714,11 @@ class SharedState:
                     try:
                         if datetime.now() - datetime.fromisoformat(ts) < timedelta(seconds=ttl_seconds):
                             return True
-                    except Exception:
+                    except Exception as exc:
+                        _fallback_log(f"Error parsing subagent timestamp: {exc}")
                         continue
-        except Exception:
+        except Exception as exc:
+            _fallback_log(f"is_subagent_active failed: {exc}")
             return False
         return False
 

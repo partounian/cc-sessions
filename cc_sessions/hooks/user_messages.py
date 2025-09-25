@@ -18,6 +18,13 @@ transcript_path = input_data.get("transcript_path", "")
 context = ""
 
 # Get configuration (if exists)
+def _log_warning(message: str) -> None:
+    try:
+        get_shared_state().log_warning(f"user_messages: {message}")
+    except Exception:
+        print(f"WARNING: user_messages: {message}", file=sys.stderr)
+
+
 try:
     from pathlib import Path
     from shared_state import get_project_root
@@ -29,7 +36,8 @@ try:
             config = json.load(f)
     else:
         config = {}
-except Exception:
+except Exception as exc:
+    _log_warning(f"Failed to load configuration: {exc}")
     config = {}
 
 # Default trigger phrases if not configured
@@ -93,8 +101,8 @@ def get_context_length_from_transcript(transcript_path):
                 most_recent_usage.get('cache_creation_input_tokens', 0)
             )
             return context_length
-    except Exception:
-        pass
+    except Exception as exc:
+        _log_warning(f"get_context_length_from_transcript failed for {transcript_path}: {exc}")
     return 0
 
 # Check context usage and warn if needed (only if tiktoken is available)

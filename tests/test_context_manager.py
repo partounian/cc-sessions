@@ -44,3 +44,21 @@ def test_precompact_creates_summaries(tmp_path: Path):
     assert phase in ("discussion", "implementation")
 
 
+def test_precompact_logs_context_usage_failure(monkeypatch):
+    import cc_sessions.hooks.context_manager as cm
+
+    captured: list[str] = []
+    monkeypatch.setattr(cm.ContextManager, "_log_warning", lambda self, msg: captured.append(msg))
+
+    manager = cm.ContextManager()
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("log_context_usage broken")
+
+    manager.shared_state = type("Stub", (), {"log_context_usage": staticmethod(boom)})()
+
+    manager._log_context_usage({})
+
+    assert any("Failed to log context usage" in msg for msg in captured)
+
+
