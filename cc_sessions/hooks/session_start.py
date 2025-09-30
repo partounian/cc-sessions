@@ -42,13 +42,10 @@ def _log_warning(shared_state, message: str) -> None:
 
 def initialize_session():
     """Initialize enhanced session with workspace awareness"""
-    print("Initializing enhanced cc-sessions with workspace awareness...")
+    # Session initialization (quiet mode - details in context output)
 
     # Get shared state instance
     shared_state = get_shared_state()
-
-    # Note: Session start time is now calculated from log files automatically
-    # No need to explicitly set it here
 
     # Get developer name from config
     try:
@@ -140,30 +137,22 @@ Or follow the manual setup in the documentation.
 
     # Add workspace information if multi-repo setup is available
     if workspace_context.get('repositories'):
+        repos = workspace_context.get('repositories', [])
         context += f"""
 
 ## Workspace Information
 
 **Workspace Root:** {workspace_context.get('workspace_root', 'Unknown')}
-**Detected Repositories:** {len(workspace_context.get('repositories', []))}
-
+**Detected Repositories:** {len(repos)}
 """
-        for repo_path in workspace_context.get('repositories', []):
+        # Show repositories (max 5, then summarize)
+        for repo_path in repos[:5]:
             repo_name = Path(repo_path).name
-            context += f"  • {repo_name} ({repo_path})\n"
+            context += f"  • {repo_name}\n"
+        if len(repos) > 5:
+            context += f"  ... and {len(repos) - 5} more\n"
 
-        context += """
-**Multi-Repository Features Available:**
-- Cross-repository task coordination
-- Workspace-aware context sharing
-- Repository relationship analysis
-- Coordinated change management
-
-To use multi-repository features:
-- Create cross-repo tasks: "Create a cross-repo task for: [description]"
-- Analyze relationships: "Analyze workspace relationships"
-- Coordinate changes: "Coordinate implementation across repos"
-"""
+        context += "\n**Multi-repository task coordination and analysis available.**\n"
 
     # If setup is needed, provide guidance
     if needs_setup:
@@ -337,33 +326,23 @@ def _render_task_summary(task_file: Path) -> str:
 def initialize_workspace_awareness(shared_state):
     """Initialize workspace awareness for multi-repository support"""
     try:
-        print("Setting up workspace awareness...")
-
-        # Set up workspace awareness
+        # Set up workspace awareness (quietly)
         workspace_context = shared_state.setup_workspace_awareness()
 
         # Detect repositories (with timeout protection)
         try:
             repositories = shared_state.detect_workspace_repositories()
-            print(f"Detected {len(repositories)} repositories:")
-
-            # Show all detected repositories (max 10)
-            for repo in repositories:
-                print(f"  - {repo.name} ({repo})")
-
         except Exception as e:
-            print(f"Warning: Repository detection failed: {e}")
+            _log_warning(shared_state, f"Repository detection failed: {e}")
             repositories = []
 
-        # Create workspace agent configurations
-        create_workspace_agent_configs(shared_state)
-
-        print("Workspace awareness initialized successfully!")
+        # Create workspace agent configurations (only if missing)
+        create_workspace_agent_configs(shared_state, quiet=True)
 
         return workspace_context
 
     except Exception as e:
-        print(f"Error initializing workspace awareness: {e}")
+        _log_warning(shared_state, f"Error initializing workspace awareness: {e}")
         return {
             'workspace_root': str(shared_state.workspace_root),
             'project_root': str(shared_state.project_root),
@@ -371,12 +350,18 @@ def initialize_workspace_awareness(shared_state):
             'error': str(e)
         }
 
-def create_workspace_agent_configs(shared_state):
-    """Create workspace-specific agent configurations"""
+def create_workspace_agent_configs(shared_state, quiet=False):
+    """Create workspace-specific agent configurations (only if missing)"""
     try:
         workspace_root = shared_state.workspace_root
         agents_dir = workspace_root / '.claude' / 'agents'
         agents_dir.mkdir(parents=True, exist_ok=True)
+
+        # Check if agent configs already exist
+        cross_repo_file = agents_dir / 'cross_repo_analyzer.json'
+        workspace_coord_file = agents_dir / 'workspace_coordinator.json'
+        if cross_repo_file.exists() and workspace_coord_file.exists():
+            return  # Already configured
 
         # Cross-repo analyzer agent
         cross_repo_analyzer = {
@@ -449,10 +434,11 @@ Coordinate the current task across the relevant repositories and suggest a workf
         with open(agents_dir / 'workspace_coordinator.json', 'w') as f:
             json.dump(workspace_coordinator, f, indent=2)
 
-        print(f"Workspace agent configurations created in: {agents_dir}")
+        if not quiet:
+            print(f"Workspace agent configurations created in: {agents_dir}")
 
     except Exception as e:
-        print(f"Error creating workspace agent configurations: {e}")
+        _log_warning(shared_state, f"Error creating workspace agent configurations: {e}")
 
 def main():
     """Main entry point for Enhanced Session Start hook"""
