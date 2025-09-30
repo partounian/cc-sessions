@@ -603,14 +603,14 @@ class SharedState:
                 first_entry = tool_log[0]
                 if 'timestamp' in first_entry:
                     return first_entry['timestamp']
-            
+
             # Try workflow events log
             workflow_log = self.get_workflow_events()
             if workflow_log and len(workflow_log) > 0:
                 first_entry = workflow_log[0]
                 if 'timestamp' in first_entry:
                     return first_entry['timestamp']
-            
+
             # Fallback to file creation time of tool usage log
             if self.tool_usage_log_file.exists():
                 import os
@@ -619,7 +619,7 @@ class SharedState:
                 ctime = getattr(stat, 'st_birthtime', stat.st_mtime)
                 from datetime import datetime
                 return datetime.fromtimestamp(ctime).isoformat()
-            
+
         except Exception:
             pass
         return None
