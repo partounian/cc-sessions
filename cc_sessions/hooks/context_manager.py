@@ -709,7 +709,7 @@ class ContextManager:
 
             # Workflow recovery instructions
             current_phase = workflow_state.get('current_phase')
-            if current_phase and current_phase != 'unknown':
+            if current_phase and current_phase not in ('unknown', 'Unknown', 'none', 'None', ''):
                 instructions.append(f"Resume workflow in {current_phase} phase")
 
             # Task recovery instructions
@@ -717,7 +717,8 @@ class ContextManager:
             if current_task:
                 task_name = current_task.get('task') or current_task.get('id') or current_task.get('name')
                 task_title = current_task.get('title') or task_name
-                if task_title:
+                # Filter out meaningless placeholder values
+                if task_title and task_title not in ('Unknown Task', 'Unknown', 'unknown', 'None', 'none', ''):
                     instructions.append(f"Continue with task: {task_title}")
 
             # Context recovery instructions
