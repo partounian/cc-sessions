@@ -47,11 +47,8 @@ def initialize_session():
     # Get shared state instance
     shared_state = get_shared_state()
 
-    # Record session start time for duration/analytics
-    try:
-        shared_state.set_session_start_time()
-    except Exception as exc:
-        _log_warning(shared_state, f"set_session_start_time failed: {exc}")
+    # Note: Session start time is now calculated from log files automatically
+    # No need to explicitly set it here
 
     # Get developer name from config
     try:

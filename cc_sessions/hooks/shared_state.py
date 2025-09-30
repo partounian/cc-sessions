@@ -71,7 +71,6 @@ class SharedState:
         # Core state files
         self.daic_state_file = self.state_dir / "daic-mode.json"
         self.task_state_file = self.state_dir / "current_task.json"
-        self.session_start_file = self.state_dir / "session_start.json"
 
         # Multi-repo configuration
         self.multi_repo_config_file = self.workspace_state_dir / "multi_repo_config.json"
@@ -596,24 +595,34 @@ class SharedState:
 
     # Session Management
     def get_session_start_time(self) -> Optional[str]:
-        """Get session start time"""
+        """Get session start time from first log entry or file creation time"""
         try:
-            if self.session_start_file.exists():
-                with open(self.session_start_file, 'r') as f:
-                    data = json.load(f)
-                    return data.get('start_time')
-        except Exception as exc:
-            _fallback_log(f"_load_log_file failed for {log_file}: {exc}")
+            # Try to get from first entry in tool usage log
+            tool_log = self.get_tool_usage_log()
+            if tool_log and len(tool_log) > 0:
+                first_entry = tool_log[0]
+                if 'timestamp' in first_entry:
+                    return first_entry['timestamp']
+            
+            # Try workflow events log
+            workflow_log = self.get_workflow_events()
+            if workflow_log and len(workflow_log) > 0:
+                first_entry = workflow_log[0]
+                if 'timestamp' in first_entry:
+                    return first_entry['timestamp']
+            
+            # Fallback to file creation time of tool usage log
+            if self.tool_usage_log_file.exists():
+                import os
+                stat = os.stat(self.tool_usage_log_file)
+                # Use file creation time (or modification time as fallback)
+                ctime = getattr(stat, 'st_birthtime', stat.st_mtime)
+                from datetime import datetime
+                return datetime.fromtimestamp(ctime).isoformat()
+            
+        except Exception:
+            pass
         return None
-
-    def set_session_start_time(self, start_time: str = None) -> None:
-        """Set session start time"""
-        if start_time is None:
-            start_time = self._get_timestamp()
-
-        self._ensure_state_dir()
-        with open(self.session_start_file, 'w') as f:
-            json.dump({'start_time': start_time}, f, indent=2)
 
     # Logging and Analytics
     def log_tool_usage(self, log_entry: Dict[str, Any]) -> None:
