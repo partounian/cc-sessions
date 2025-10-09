@@ -128,11 +128,11 @@ def initialize_session():
         # Sessions directory doesn't exist - likely first run
         context += """Sessions system is not yet initialized.
 
-Run the install script to set up the sessions framework:
-.claude/sessions-setup.sh
+        Run the install script to set up the sessions framework:
+        .claude/sessions-setup.sh
 
-Or follow the manual setup in the documentation.
-"""
+        Or follow the manual setup in the documentation.
+        """
 
     # Add workspace information if multi-repo setup is available
     if workspace_context.get('repositories'):
@@ -140,12 +140,12 @@ Or follow the manual setup in the documentation.
         # repos = workspace_context.get('repositories', [])
         context += f"""
 
-## Workspace Information
+        ## Workspace Information
 
-**Workspace Root:** {workspace_context.get('workspace_root', 'Unknown')}
-**Detected Repositories:** {len(workspace_context.get('repositories', []))}
+        **Workspace Root:** {workspace_context.get('workspace_root', 'Unknown')}
+        **Detected Repositories:** {len(workspace_context.get('repositories', []))}
 
-"""
+        """
         for repo_path in workspace_context.get('repositories', []):
             repo_name = Path(repo_path).name
             context += f"  • {repo_name} ({repo_path})\n"
