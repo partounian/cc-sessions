@@ -96,7 +96,7 @@ had_active_todos = False
 UserPromptSubmit Hook
 
 Manages DAIC mode transitions and protocol triggers:
-- Detects trigger phrases for mode switching and protocol activation  
+- Detects trigger phrases for mode switching and protocol activation
 - Monitors context window usage and provides warnings
 - Auto-loads protocol todos when protocols are triggered
 - Clears active todos when switching contexts
@@ -154,23 +154,60 @@ def get_context_length_from_transcript(transcript_path):
 # ===== EXECUTION ===== #
 
 ## ===== TOKEN MONITORING ===== ##
-# Check context usage and warn if needed
+def _estimate_tokens_from_text(text: str) -> int:
+    try:
+        return max(0, int(len(text or "") / 4))
+    except Exception:
+        return 0
+
+
+def _estimate_tokens_fallback(prompt_text: str, transcript_path: str) -> int:
+    """Heuristic fallback when transcript usage is unavailable."""
+    try:
+        if transcript_path and os.path.exists(transcript_path):
+            with open(transcript_path, 'r', encoding='utf-8', errors='backslashreplace') as f:
+                lines = f.readlines()[-200:]
+            est = 0
+            for line in lines:
+                try:
+                    data = json.loads(line.strip())
+                except Exception:
+                    continue
+                msg = data.get('message') or {}
+                content = msg.get('content')
+                if isinstance(content, list):
+                    for part in content:
+                        if isinstance(part, dict) and part.get('type') == 'text':
+                            est += _estimate_tokens_from_text(part.get('text', ''))
+                elif isinstance(content, str):
+                    est += _estimate_tokens_from_text(content)
+            if est > 0:
+                return est
+    except Exception:
+        pass
+    return _estimate_tokens_from_text(prompt_text)
+
+
+# Compute context usage with transcript-first, then heuristic fallback
+usable_tokens = 160000
+if STATE.model == "sonnet": usable_tokens = 800000
+
+context_length = 0
 if transcript_path and os.path.exists(transcript_path):
-    context_length = get_context_length_from_transcript(transcript_path)
+    context_length = get_context_length_from_transcript(transcript_path) or 0
+if context_length <= 0:
+    context_length = _estimate_tokens_fallback(prompt, transcript_path)
 
-    if context_length > 0:
-        # Calculate percentage of usable context (opus 160k/sonnet 800k practical limit before auto-compact)
-        usable_tokens = 160000
-        if STATE.model == "sonnet": usable_tokens = 800000
-        usable_percentage = (context_length / usable_tokens) * 100
+if context_length > 0:
+    usable_percentage = (context_length / usable_tokens) * 100
 
-        # Token warnings (only show once per session)
-        if usable_percentage >= 90 and not STATE.flags.context_90 and CONFIG.features.context_warnings.warn_90:
-            context += f"\n[90% WARNING] {context_length:,}/{usable_tokens:,} tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
-            with edit_state() as s: s.flags.context_90 = True; STATE = s
-        elif usable_percentage >= 85 and not STATE.flags.context_85 and CONFIG.features.context_warnings.warn_85:
-            context += f"\n[Warning] Context window is {usable_percentage:.1f}% full ({context_length:,}/{usable_tokens:,} tokens). The danger zone is >90%. You will receive another warning when you reach 90% - don't panic but gently guide towards context compaction or task completion (if task is nearly complete). Task completion often satisfies compaction requirements and should allow the user to clear context safely, so you do not need to worry about fitting in both processes.\n"
-            with edit_state() as s: s.flags.context_85 = True; STATE = s
+    # Token warnings (only show once per session)
+    if usable_percentage >= 90 and not STATE.flags.context_90 and CONFIG.features.context_warnings.warn_90:
+        context += f"\n[90% WARNING] {context_length:,}/{usable_tokens:,} tokens used ({usable_percentage:.1f}%). CRITICAL: Run sessions/protocols/task-completion.md to wrap up this task cleanly!\n"
+        with edit_state() as s: s.flags.context_90 = True; STATE = s
+    elif usable_percentage >= 85 and not STATE.flags.context_85 and CONFIG.features.context_warnings.warn_85:
+        context += f"\n[Warning] Context window is {usable_percentage:.1f}% full ({context_length:,}/{usable_tokens:,} tokens). The danger zone is >90%. You will receive another warning when you reach 90% - don't panic but gently guide towards context compaction or task completion (if task is nearly complete). Task completion often satisfies compaction requirements and should allow the user to clear context safely, so you do not need to worry about fitting in both processes.\n"
+        with edit_state() as s: s.flags.context_85 = True; STATE = s
 ##-##
 
 ## ===== TRIGGER DETECTION ===== ##
@@ -224,14 +261,14 @@ if not is_api_command and task_creation_detected:
         CCTodo(
             content='Commit the new task file',
             activeForm='Committing the new task file')]
-    
+
     # Load and compose protocol based on config
     protocol_content = load_protocol_file('task-creation/task-creation.md')
 
     # Build template variables
     if CONFIG.git_preferences.has_submodules: submodules_field = "\n  - submodules: List all submodules requiring git branches for the task (all that will be affected)"
     else: submodules_field = ""
- 
+
     template_vars = {
         'submodules_field': submodules_field,
         'todos': format_todos_for_protocol(todos)
@@ -240,7 +277,7 @@ if not is_api_command and task_creation_detected:
     # Format protocol with template variables
     if protocol_content: protocol_content = protocol_content.format(**template_vars)
 
-    with edit_state() as s: 
+    with edit_state() as s:
         s.mode = Mode.GO; s.active_protocol = SessionsProtocol.CREATE
         if s.todos.active: had_active_todos = True; s.todos.stash_active()
         s.todos.active = todos
@@ -305,7 +342,7 @@ if not is_api_command and task_completion_detected:
 
     # Load and compose protocol based on config
     protocol_content = load_protocol_file('task-completion/task-completion.md')
- 
+
     # Build template variables based on configuration
     template_vars = {
         'default_branch': CONFIG.git_preferences.default_branch,
@@ -439,13 +476,13 @@ if not is_api_command and task_start_detected:
 
     # Build template variables for protocol
     git_status_scope = 'in both super-repo and all submodules' if CONFIG.git_preferences.has_submodules else ''
-    
+
     # Build git handling instructions based on add_pattern
     if CONFIG.git_preferences.add_pattern == 'all':
         git_handling = '- Commit ALL changes'
     else:  # 'ask' pattern
         git_handling = '- Either commit changes or explicitly discuss with user'
-    
+
     template_vars = {
         'default_branch': CONFIG.git_preferences.default_branch,
         'submodule_branch_todo': ' and matching submodule branches' if CONFIG.git_preferences.has_submodules else '',
@@ -499,11 +536,11 @@ if not is_api_command and compaction_detected:
     # Format protocol with template variables
     if protocol_content: protocol_content = protocol_content.format(**template_vars)
 
-    if STATE.todos.active: 
+    if STATE.todos.active:
         had_active_todos = True
         with edit_state() as s: s.todos.stash_active(); STATE = s
 
-    with edit_state() as s: 
+    with edit_state() as s:
         s.mode = Mode.GO; s.active_protocol = SessionsProtocol.COMPACT
         s.todos.active = todos
         STATE = s
