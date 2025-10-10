@@ -155,6 +155,52 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
         mod = True
 #!<
 
+#!> Lightweight metrics aggregation (best-effort)
+def _update_session_metrics() -> None:
+    """Aggregate simple counts from sessions-events.jsonl and write a summary.
+
+    Best-effort; never block tool flow on analytics errors.
+    """
+    try:
+        from datetime import datetime
+        events_file = PROJECT_ROOT / "sessions" / "sessions-events.jsonl"
+        if not events_file.exists():
+            return
+        with open(events_file, "r", encoding="utf-8", errors="backslashreplace") as f:
+            lines = f.readlines()[-2000:]
+
+        counts = {}
+        total = 0
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except Exception:
+                continue
+            ev_type = ev.get("type") or "unknown"
+            counts[ev_type] = counts.get(ev_type, 0) + 1
+            total += 1
+
+        out = {
+            "updated_at": datetime.now().isoformat(),
+            "events_total_last_2000": total,
+            "by_type": counts,
+        }
+        out_dir = PROJECT_ROOT / "sessions" / "analytics"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        out_file = out_dir / "session_metrics.json"
+        with open(out_file, "w", encoding="utf-8", errors="backslashreplace") as f:
+            json.dump(out, f, indent=2)
+    except Exception:
+        # swallow all analytics errors
+        pass
+
+# Always attempt to update metrics; do not block on failure
+_update_session_metrics()
+#!<
+
 #!> Implementation mode + no Todos enforcement
 if (
     STATE.mode is Mode.GO
