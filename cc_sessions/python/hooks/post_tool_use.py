@@ -98,6 +98,20 @@ if tool_name == "Task" and STATE.flags.subagent:
 if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_complete():
     # Check if all complete (names already verified to match if active_todos existed)
     print("[DAIC: Todos Complete] All todos completed.\n\n", file=sys.stderr)
+    # Stream a DAIC transition event for analytics
+    try:
+        from datetime import datetime
+        events_file = PROJECT_ROOT / "sessions" / "sessions-events.jsonl"
+        events_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(events_file, "a", encoding="utf-8", errors="backslashreplace") as f:
+            f.write(json.dumps({
+                "type": "daic_transition",
+                "to": "discussion",
+                "reason": "todos_complete",
+                "timestamp": datetime.now().isoformat(),
+            }) + "\n")
+    except Exception:
+        pass
 
     if STATE.active_protocol is SessionsProtocol.COMPLETE:
         with edit_state() as s:
