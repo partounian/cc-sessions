@@ -126,6 +126,25 @@ def is_ci_environment():
 
 #-#
 
+# ===== WORKFLOW EVENT LOGGING ===== #
+def _append_event(event: dict) -> None:
+    """Append a workflow event as JSONL under sessions/.
+
+    Lightweight streaming logger; avoids loading entire file.
+    """
+    try:
+        from datetime import datetime
+        event = dict(event or {})
+        if "timestamp" not in event:
+            event["timestamp"] = datetime.now().isoformat()
+        events_file = PROJECT_ROOT / "sessions" / "sessions-events.jsonl"
+        events_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(events_file, "a", encoding="utf-8", errors="backslashreplace") as f:
+            f.write(json.dumps(event) + "\n")
+    except Exception:
+        # Best-effort only; never block on analytics
+        pass
+
 """
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║ ██████╗ █████╗ ██████╗ ██████╗ █████╗  █████╗ ██╗      ██╗ ██╗██████╗██████╗ ║
@@ -284,8 +303,22 @@ if tool_name == "Bash" and STATE.mode is Mode.NO and not STATE.flags.bypass_mode
               "Note: Both Claude and the user can configure allowed commands:\n"
               "  - View allowed: sessions config read list\n"
               "  - Add command: sessions config read add <command>\n"
-              "  - Remove command: sessions config read remove <command>", file=sys.stderr); sys.exit(2)  # Block with feedback
-    else: sys.exit(0)
+              "  - Remove command: sessions config read remove <command>", file=sys.stderr)
+        _append_event({
+            "type": "tool_blocked",
+            "reason": "bash_write_in_discussion",
+            "tool": "Bash",
+            "command": command,
+        })
+        sys.exit(2)  # Block with feedback
+    else:
+        _append_event({
+            "type": "tool_allowed",
+            "tool": "Bash",
+            "reason": "read_only_command",
+            "command": command,
+        })
+        sys.exit(0)
 #!<
 
 #!> Block any attempt to modify sessions-state.json directly
@@ -305,6 +338,11 @@ if file_path and all([
 if STATE.mode is Mode.NO and not STATE.flags.bypass_mode:
     if CONFIG.blocked_actions.is_tool_blocked(tool_name):
         print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
+        _append_event({
+            "type": "tool_blocked",
+            "reason": "blocked_tool_in_discussion",
+            "tool": tool_name,
+        })
         sys.exit(2)  # Block with feedback
     else: sys.exit(0)  # Allow read-only tools
 #!<
@@ -374,18 +412,30 @@ else:
             if repo_path == PROJECT_ROOT: in_task = True # Root repo - always considered in task
 
             # Scenario 1: Everything is correct - allow to proceed
-            if in_task and branch_correct: pass
+            if in_task and branch_correct:
+                pass
 
             # Scenario 2: Submodule is in task but on wrong branch
             elif in_task and not branch_correct:
                 print(f"[Branch Mismatch] Submodule '{submodule_name}' is part of this task but is on branch '{current_branch}' instead of '{expected_branch}'.", file=sys.stderr)
                 print(f"Please run: cd {repo_path.relative_to(PROJECT_ROOT)} && git checkout {expected_branch}", file=sys.stderr)
+                _append_event({
+                    "type": "branch_mismatch",
+                    "service": submodule_name,
+                    "expected": expected_branch,
+                    "actual": current_branch,
+                })
                 sys.exit(2)
 
             # Scenario 3: Submodule not in task but already on correct branch
             elif not in_task and branch_correct:
                 print(f"[Submodule Not in Task] Submodule '{submodule_name}' is on the correct branch '{expected_branch}' but is not listed in the task file.", file=sys.stderr)
                 print(f"Please update the task file to include '{submodule_name}' in the submodules list.", file=sys.stderr)
+                _append_event({
+                    "type": "service_not_in_task",
+                    "service": submodule_name,
+                    "branch": current_branch,
+                })
                 sys.exit(2)
 
             # Scenario 4: Submodule not in task AND on wrong branch
@@ -395,6 +445,12 @@ else:
                 print(f"  2. On branch '{current_branch}' instead of '{expected_branch}'", file=sys.stderr)
                 print(f"To fix: cd {repo_path.relative_to(PROJECT_ROOT)} && git checkout -b {expected_branch}", file=sys.stderr)
                 print(f"Then update the task file to include '{submodule_name}' in the submodules list.", file=sys.stderr)
+                _append_event({
+                    "type": "service_not_in_task_and_wrong_branch",
+                    "service": submodule_name,
+                    "expected": expected_branch,
+                    "actual": current_branch,
+                })
                 sys.exit(2)
         except (subprocess.TimeoutExpired, subprocess.SubprocessError) as e:
             # Can't check branch, allow to proceed but warn
