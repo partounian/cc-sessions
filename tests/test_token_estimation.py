@@ -1,5 +1,26 @@
 from pathlib import Path
 import json
+import ast
+
+
+def _load_function_from_user_messages(func_name: str):
+    """Safely load a single function object from user_messages.py without importing module-level side effects."""
+    hooks_dir = Path(__file__).resolve().parents[1] / "cc_sessions" / "python" / "hooks"
+    src_path = hooks_dir / "user_messages.py"
+    source = src_path.read_text(encoding="utf-8", errors="backslashreplace")
+    module = ast.parse(source)
+    func_node = None
+    for node in module.body:
+        if isinstance(node, ast.FunctionDef) and node.name == func_name:
+            func_node = node
+            break
+    assert func_node is not None, f"Function {func_name} not found"
+    # Build a new module containing only the function
+    new_mod = ast.Module(body=[func_node], type_ignores=[])
+    code = compile(new_mod, filename=str(src_path), mode="exec")
+    ns = {"json": json}
+    exec(code, ns)
+    return ns[func_name]
 
 
 def write_transcript(tmp: Path, entries: list[dict]) -> Path:
@@ -12,7 +33,7 @@ def write_transcript(tmp: Path, entries: list[dict]) -> Path:
 
 def test_transcript_usage_parsing(monkeypatch, tmp_path: Path):
     # Import function under test
-    from cc_sessions.python.hooks.user_messages import get_context_length_from_transcript
+    get_context_length_from_transcript = _load_function_from_user_messages("get_context_length_from_transcript")
 
     entries = [
         {"timestamp": "2025-01-01T00:00:00", "isSidechain": False, "message": {"usage": {"input_tokens": 100, "cache_read_input_tokens": 50, "cache_creation_input_tokens": 0}}},
@@ -24,9 +45,9 @@ def test_transcript_usage_parsing(monkeypatch, tmp_path: Path):
 
 def test_heuristic_estimation(monkeypatch, tmp_path: Path):
     # Use internal fallback helpers by importing module and calling private function
-    import cc_sessions.python.hooks.user_messages as um
+    _estimate_tokens_from_text = _load_function_from_user_messages("_estimate_tokens_from_text")
 
-    est = um._estimate_tokens_from_text("a" * 400)
+    est = _estimate_tokens_from_text("a" * 400)
     assert 90 <= est <= 110  # ~100 tokens
 
 

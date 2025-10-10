@@ -152,6 +152,20 @@ if STATE.mode is Mode.GO and tool_name == "TodoWrite" and STATE.todos.all_comple
             "You have returned to discussion mode. You may now discuss next steps with the user.\n\n",
             file=sys.stderr,
         )
+        # Stream a DAIC transition event to discussion (fallback path)
+        try:
+            from datetime import datetime
+            events_file = PROJECT_ROOT / "sessions" / "sessions-events.jsonl"
+            events_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(events_file, "a", encoding="utf-8", errors="backslashreplace") as f:
+                f.write(json.dumps({
+                    "type": "daic_transition",
+                    "to": "discussion",
+                    "reason": "no_active_todos",
+                    "timestamp": datetime.now().isoformat(),
+                }) + "\n")
+        except Exception:
+            pass
         mod = True
 #!<
 

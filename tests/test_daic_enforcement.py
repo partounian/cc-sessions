@@ -16,6 +16,7 @@ def setup_discussion(tmp: Path) -> None:
     (tmp / ".claude").mkdir(parents=True, exist_ok=True)
     (tmp / "sessions").mkdir(parents=True, exist_ok=True)
     state = {
+        "model": "opus",
         "mode": "discussion",
         "current_task": {"name": "t", "branch": "feature/x", "file": None, "submodules": []},
         "todos": {"active": []},

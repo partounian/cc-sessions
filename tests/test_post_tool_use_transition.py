@@ -16,6 +16,7 @@ def setup_impl_with_todos(tmp: Path) -> None:
     (tmp / ".claude").mkdir(parents=True, exist_ok=True)
     (tmp / "sessions").mkdir(parents=True, exist_ok=True)
     state = {
+        "model": "opus",
         "mode": "implementation",
         "current_task": {"name": "t", "branch": "feature/x", "file": None, "submodules": []},
         "todos": {"active": [{"content": "do a"}]},
@@ -28,10 +29,10 @@ def test_daic_transition_on_todos_complete(tmp_path: Path):
     setup_impl_with_todos(tmp_path)
     payload = {"tool_name": "TodoWrite", "tool_input": {}, "cwd": str(tmp_path)}
 
-    # Simulate all todos complete by marking state then running post tool
+    # Simulate all todos complete by marking status to completed
     state_path = tmp_path / "sessions" / "sessions-state.json"
     st = json.loads(state_path.read_text())
-    st["todos"]["active"] = []
+    st["todos"]["active"][0]["status"] = "completed"
     state_path.write_text(json.dumps(st))
 
     res = run_post_tool(tmp_path, payload)

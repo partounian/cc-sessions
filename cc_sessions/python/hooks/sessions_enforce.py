@@ -331,7 +331,7 @@ if file_path and all([
         print("[Security] Direct modification of sessions-state.json is not allowed. "
                 "This file should only be modified through the TodoWrite tool and approved commands.", file=sys.stderr); sys.exit(2)
 #!<
- 
+
 # --- All commands beyond here contain write patterns (read patterns exit early) ---
 
 #!> Discussion mode guard (block write tools)
@@ -363,7 +363,7 @@ if tool_name == "TodoWrite" and not STATE.flags.bypass_mode:
                   "If this was an error, re-propose your previously planned todos.", file=sys.stderr)
             sys.exit(2)
 
-    with edit_state() as s: 
+    with edit_state() as s:
         if not s.todos.store_todos(incoming_todos): print("[TodoWrite Error] Failed to store todos - check format", file=sys.stderr); sys.exit(2)
         else: STATE = s
 #!<
@@ -402,7 +402,7 @@ else:
                 timeout=2
             )
             current_branch = result.stdout.strip()
-    
+
             # Extract the submodule name from the repo path
             submodule_name = repo_path.name
 
