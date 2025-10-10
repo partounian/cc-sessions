@@ -1,0 +1,25 @@
+{
+  "timestamp": "2025-09-24T12:40:02.362338",
+  "active_agents": [],
+  "agent_states": {},
+  "context_requirements": {
+    "current_task": {
+      "task": "t1",
+      "branch": "feature/t1",
+      "services": [
+        "svc"
+      ],
+      "updated": "2025-09-17T16:02:14.423087"
+    },
+    "context_sources": [
+      "current_task",
+      "daic_mode"
+    ],
+    "relevance_filters": {
+      "current_task_relevance": true,
+      "agent_context_relevance": true,
+      "workflow_state_relevance": true
+    }
+  },
+  "agent_dependencies": {}
+}

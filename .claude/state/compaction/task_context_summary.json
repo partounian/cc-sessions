@@ -1,0 +1,13 @@
+{
+  "current_task": {
+    "task": "t1",
+    "branch": "feature/t1",
+    "services": [
+      "svc"
+    ],
+    "updated": "2025-09-17T16:02:14.423087"
+  },
+  "task_history": [],
+  "related_files": [],
+  "dependencies": []
+}

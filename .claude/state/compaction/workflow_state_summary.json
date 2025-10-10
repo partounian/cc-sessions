@@ -1,0 +1,12 @@
+{
+  "daic_mode": "discussion",
+  "current_phase": "discussion",
+  "workflow_progress": {
+    "task_id": "t1",
+    "task_title": "t1",
+    "progress_percentage": 0
+  },
+  "enforcement_state": {
+    "enforcement_active": false
+  }
+}

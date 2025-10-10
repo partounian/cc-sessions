@@ -1,0 +1,25 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../Documents/code/.claude"
+		},
+		{
+			"path": "../../Documents/code/sessions"
+		},
+		{
+			"path": "../../Documents/code"
+		},
+		{
+			"path": "../../Documents/claude-install-restore"
+		},
+		{
+			"path": "../../Documents/cc_sessions_backups"
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
+}

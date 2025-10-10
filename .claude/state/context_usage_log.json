@@ -1,0 +1,95 @@
+[
+  {
+    "tokens_used": 0,
+    "timestamp": "2025-09-17T14:50:50.765337",
+    "peak_usage": 0,
+    "warning_triggered": false,
+    "compaction_triggered": true
+  },
+  {
+    "tokens_used": 0,
+    "timestamp": "2025-09-17T15:18:01.308069",
+    "peak_usage": 0,
+    "warning_triggered": false,
+    "compaction_triggered": true
+  },
+  {
+    "tokens_used": 0,
+    "timestamp": "2025-09-17T16:02:14.388845",
+    "peak_usage": 0,
+    "warning_triggered": false,
+    "compaction_triggered": true
+  },
+  {
+    "tokens_used": 0,
+    "timestamp": "2025-09-17T16:02:56.249769",
+    "peak_usage": 0,
+    "warning_triggered": false,
+    "compaction_triggered": true
+  },
+  {
+    "tokens_used": 0,
+    "timestamp": "2025-09-17T16:07:53.568681",
+    "peak_usage": 0,
+    "warning_triggered": false,
+    "compaction_triggered": true
+  },
+  {
+    "tokens_used": 0,
+    "timestamp": "2025-09-17T16:11:55.920970",
+    "peak_usage": 0,
+    "warning_triggered": false,
+    "compaction_triggered": true
+  }
+]{"tokens_used": 0, "timestamp": "2025-09-18T10:21:36.680712", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-18T10:22:18.555530", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-18T15:41:52.462030", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-18T15:44:37.812587", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-18T16:07:51.478339", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-19T16:28:03.716650", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-19T16:32:19.429311", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-19T19:49:25.537330", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-19T19:55:00.353946", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-19T20:20:27.355157", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-19T20:49:50.999906", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T09:29:57.962317", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T09:31:50.614928", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T10:15:28.899493", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T10:17:27.202231", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T12:36:32.942469", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T12:40:43.773783", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T13:51:16.294295", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T14:17:36.603756", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T14:21:26.444316", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-22T14:23:17.458489", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T12:03:05.071076", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T12:03:23.836671", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T14:47:14.176224", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T14:52:30.142809", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T14:58:22.670659", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T15:00:43.562188", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T15:16:16.092013", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-23T15:26:57.342927", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:55:25.974244", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:55:49.196342", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:56:16.680904", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:56:34.306848", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:56:49.418356", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:57:52.236955", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:58:24.877127", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:58:48.379855", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:59:27.276893", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T08:59:57.212680", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:00:31.126606", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:01:09.683510", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:01:32.589203", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:02:04.985949", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:02:46.015187", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:03:31.407286", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:04:00.268556", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:04:56.598191", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:05:53.422660", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:09:40.809061", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:10:44.150871", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T09:16:42.677432", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}
+{"tokens_used": 0, "timestamp": "2025-09-24T12:40:02.364427", "peak_usage": 0, "warning_triggered": false, "compaction_triggered": true}

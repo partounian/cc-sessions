@@ -20,6 +20,8 @@ from hooks.shared_state import (
     TaskState,
     SessionsProtocol,
     PROJECT_ROOT,
+    WORKSPACE_ROOT,
+    TASKS_DIR,
     get_task_file_path,
     is_directory_task
 )
@@ -88,7 +90,7 @@ def parse_index_file(index_path: Path) -> Optional[Tuple[Dict, List[str]]]:
 #!> Task status extraction
 def get_task_status_map() -> Dict[str, str]:
     """Build a map of task names to their status."""
-    tasks_dir = PROJECT_ROOT / 'sessions' / 'tasks'
+    tasks_dir = TASKS_DIR
     task_status = {}
 
     task_files = []
@@ -127,7 +129,7 @@ def get_task_status_map() -> Dict[str, str]:
 #!> Index operations
 def handle_idx_list(json_output: bool = False) -> Any:
     """List all available index files."""
-    indexes_dir = PROJECT_ROOT / 'sessions' / 'tasks' / 'indexes'
+    indexes_dir = TASKS_DIR / 'indexes'
 
     if not indexes_dir.exists():
         if json_output:
@@ -171,7 +173,7 @@ def handle_idx_list(json_output: bool = False) -> Any:
 
 def handle_idx_show(index_name: str, json_output: bool = False) -> Any:
     """Show pending tasks in a specific index file."""
-    indexes_dir = PROJECT_ROOT / 'sessions' / 'tasks' / 'indexes'
+    indexes_dir = TASKS_DIR / 'indexes'
 
     # Try to find the index file (with or without .md extension)
     index_path = indexes_dir / f"{index_name}.md" if not index_name.endswith('.md') else indexes_dir / index_name

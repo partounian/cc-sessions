@@ -32,10 +32,64 @@ def find_project_root() -> Path:
     print("Error: Could not find project root (no .claude directory).", file=sys.stderr)
     sys.exit(2)
 
+def find_workspace_root(project_root: Path) -> Path:
+    """Detect a stable workspace root for multi-repo setups.
+
+    Priority:
+    1) CLAUDE_WORKSPACE_ROOT environment variable
+    2) If project_root contains multiple repos (*/.git), treat project_root as workspace
+    3) Walk up parents looking for common workspace indicators
+    4) Fallback to project_root
+    """
+    # Explicit override wins
+    env_root = os.environ.get("CLAUDE_WORKSPACE_ROOT")
+    if env_root:
+        try:
+            return Path(env_root)
+        except Exception:
+            pass
+
+    # Multiple repos within project_root → treat as workspace
+    try:
+        git_dirs = list(project_root.glob('*/.git'))
+        if len(git_dirs) > 1:
+            return project_root
+    except Exception:
+        pass
+
+    # Look for common workspace indicators in parents
+    indicators = ['.vscode', 'workspace.code-workspace', '.idea']
+    cur = project_root.parent
+    while cur.parent != cur:
+        try:
+            if any((cur / ind).exists() for ind in indicators):
+                return cur
+        except Exception:
+            pass
+        cur = cur.parent
+
+    # Fallback
+    return project_root
+
 PROJECT_ROOT = find_project_root()
+WORKSPACE_ROOT = find_workspace_root(PROJECT_ROOT)
+
+# Canonical locations (policy):
+# - Tasks live under workspace_root/sessions/tasks (Markdown)
+# - Project-scoped state and config live under project_root/sessions
+TASKS_DIR = WORKSPACE_ROOT / "sessions" / "tasks"
+# Ensure canonical directories exist when imported in a runtime context
+try:
+    (TASKS_DIR).mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
+
 STATE_FILE = PROJECT_ROOT / "sessions" / "sessions-state.json"
 LOCK_DIR  = STATE_FILE.with_suffix(".lock")
 CONFIG_FILE = PROJECT_ROOT / "sessions" / "sessions-config.json"
+
+# Expose workspace state dir for ephemeral, cross-repo state (NOT for tasks)
+WORKSPACE_STATE_DIR = WORKSPACE_ROOT / ".claude" / "workspace_state"
 
 # Mode description strings
 DISCUSSION_MODE_MSG = "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)"
@@ -55,7 +109,7 @@ SharedState Module
 
 Provides centralized state management for hooks:
 - DAIC mode tracking and toggling
-- Task state persistence  
+- Task state persistence
 - Active todo list management
 - Project root detection
 
@@ -389,7 +443,7 @@ class TaskState:
                 # Handle legacy "task:" field by mapping to "name"
                 data["name"] = value or None
             else: data[key] = value or None
-        if not file and path: 
+        if not file and path:
             try: rel = path.relative_to(tasks_root); data["file"] = str(rel)
             except ValueError: data["file"] = path.name
         else: data["file"] = file
@@ -711,11 +765,11 @@ To select a task:
 - Include the task file you would like to start using `@`
 - Hit Enter to activate task startup
 """
-    else: task_startup_help += f"""No tasks found. 
+    else: task_startup_help += f"""No tasks found.
 
 To create your first task:
 - Type one of your task creation commands: {load_config().trigger_phrases.task_creation}
-- Write a brief explanation of the task you need to complete 
+- Write a brief explanation of the task you need to complete
 - Answer any questions Claude has for you
 """
 
@@ -737,7 +791,7 @@ def _the_ol_in_out(path: Path, obj: Dict[str, Any]) -> None:
 def _lock(lock_dir: Path, timeout: float = 1.0, poll: float = 0.05, stale_timeout: float = 30.0) -> Iterator[None]:
     """
     Acquire a directory-based lock with stale lock detection.
-    
+
     Args:
         lock_dir: Directory to use as lock
         timeout: Seconds to wait for lock acquisition
@@ -746,7 +800,7 @@ def _lock(lock_dir: Path, timeout: float = 1.0, poll: float = 0.05, stale_timeou
     """
     lock_info_file = lock_dir / "lock_info.json"
     start = monotonic()
-    
+
                             # Check if process exists (works on Unix0
     while True:
         # Check for stale lock first
@@ -757,7 +811,7 @@ def _lock(lock_dir: Path, timeout: float = 1.0, poll: float = 0.05, stale_timeou
                     lock_info = json.loads(lock_info_file.read_text())
                     lock_pid = lock_info.get("pid")
                     lock_time = lock_info.get("timestamp", 0)
-                    
+
                     # Check if lock is stale (older than stale_timeout)
                     if monotonic() - lock_time > stale_timeout:
                         print(f"Removing stale lock (age: {monotonic() - lock_time:.1f}s)", file=sys.stderr)
@@ -774,7 +828,7 @@ def _lock(lock_dir: Path, timeout: float = 1.0, poll: float = 0.05, stale_timeou
                 if monotonic() - start > timeout:
                     print(f"Removing malformed lock", file=sys.stderr)
                     with suppress(Exception): shutil.rmtree(lock_dir)
-        
+
         # Try to acquire lock
         try:
             lock_dir.mkdir(exist_ok=False)  # atomic lock acquire
@@ -802,7 +856,7 @@ def _lock(lock_dir: Path, timeout: float = 1.0, poll: float = 0.05, stale_timeou
                     # Someone else grabbed it in the meantime
                     raise TimeoutError(f"Could not acquire lock {lock_dir} even after force removal")
             sleep(poll)
-    
+
     try: yield
     finally:
         with suppress(Exception): shutil.rmtree(lock_dir)
@@ -825,7 +879,7 @@ def load_state() -> SessionsState:
     return SessionsState.from_dict(data)
 
 def load_config() -> SessionsConfig:
-    if not CONFIG_FILE.exists(): 
+    if not CONFIG_FILE.exists():
         initial = SessionsConfig()
         _the_ol_in_out(CONFIG_FILE, initial.to_dict())
         return initial

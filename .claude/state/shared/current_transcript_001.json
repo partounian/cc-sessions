@@ -1,0 +1,23 @@
+[
+  {
+    "role": "user",
+    "content": [
+      {
+        "type": "text",
+        "text": "please run task"
+      }
+    ]
+  },
+  {
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "name": "Task",
+        "input": {
+          "subagent_type": "shared"
+        }
+      }
+    ]
+  }
+]
