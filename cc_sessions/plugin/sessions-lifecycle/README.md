@@ -1,0 +1,1 @@
+# Sessions Lifecycle Plugin (MVP)\n\nBasic lifecycle helpers for sessions.\n\n- commands/: slash commands for session lifecycle\n- agents/: prompts for lifecycle auditing\n

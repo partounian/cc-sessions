@@ -1,0 +1,1 @@
+# sesh-session\n\nSession lifecycle helpers.\n\n## Usage\n\n- /sesh-session stop — end current session (cleanup)\n- /sesh-session status — summarize recent events and state\n\n> Uses existing cc-sessions hooks under the hood.\n
