@@ -1,0 +1,1 @@
+# Sessions Context Plugin (MVP)\n\nContext preservation/compaction helpers.\n\n- commands/: context and compaction slash commands\n- agents/: prompts for context summarization\n
