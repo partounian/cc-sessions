@@ -1051,7 +1051,7 @@ async function interactiveConfiguration() {
 
   if (statuslineChoice.value.includes('Yes')) {
     // Configure statusline in .claude/settings.json
-    const settingsFile = path.join(projectRoot, '.claude', 'settings.json');
+    const settingsFile = path.join(PROJECT_ROOT, '.claude', 'settings.json');
     let settings = {};
 
     if (fs.existsSync(settingsFile)) {

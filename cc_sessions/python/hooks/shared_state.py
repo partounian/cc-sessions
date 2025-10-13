@@ -893,6 +893,14 @@ def load_config() -> SessionsConfig:
         return fresh
     return SessionsConfig.from_dict(data)
 
+def save_config(config: SessionsConfig) -> None:
+    """Persist the provided SessionsConfig atomically to CONFIG_FILE."""
+    try:
+        _the_ol_in_out(CONFIG_FILE, config.to_dict())
+    except Exception as e:
+        print(f"Error saving sessions-config.json: {e}", file=sys.stderr)
+        raise
+
 @contextmanager
 def edit_state() -> Iterator[SessionsState]:
     # Acquire lock, reload (so we operate on latest), yield, then save atomically

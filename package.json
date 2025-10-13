@@ -6,6 +6,7 @@
   "bin": {
     "cc-sessions": "install.js",
     "cc-sessions-install": "install.js",
+    "cc-sessions-migrate": "cc_sessions/javascript/tools/migrate.js",
     "sessions": "cc_sessions/javascript/api/index.js"
   },
   "scripts": {
