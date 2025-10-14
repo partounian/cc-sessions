@@ -85,24 +85,25 @@ The system automatically preserves your work:
 
 ### upgrading from legacy (≤0.2.x)
 
-For repos already using older cc-sessions, run the migration tool to safely convert your settings and config to the new schema while backing up everything:
+If you previously used cc-sessions ≤0.2.x, use the migration utility to move legacy data into the current layout:
 
 ```bash
-# Python runtime
-cc-sessions-migrate --dry-run            # preview
-cc-sessions-migrate --yes                # run
-
-# Node runtime
-cc-sessions-migrate --dry-run            # preview
-cc-sessions-migrate --yes                # run
+python -m cc_sessions.python.scripts.migrate_workspace_tasks  # dry run by default
+# or explicitly:
+python -m cc_sessions.python.scripts.migrate_workspace_tasks
 ```
 
-What it does:
+What it does today:
 
-- Backs up `.claude/settings.json`, `.claude/hooks/`, `.claude/agents/`, `sessions/sessions-config.json`, and `sessions/tasks/` to `.claude/.backup-YYYYMMDD-HHMMSS/`
-- Disables legacy `.claude/hooks/*` by moving them under `__legacy_hooks` and activates `sessions/hooks/*`
-- Converts legacy `sessions/sessions-config.json` into the new nested schema; writes workspace data to `.claude/workspace_state/workspace.json`
-- Writes a machine-readable report to `.claude/migration-report-<timestamp>.json`
+- Converts any legacy workspace tasks (`.claude/workspace_state/workspace_tasks/*.json`) into Markdown tasks under `sessions/tasks/*.md`
+- Does not change your hooks or config
+- Prints a concise console report for review
+
+Planned CLI parity (coming soon) will add:
+
+- Backup of `.claude/settings.json`, `.claude/hooks/`, `.claude/agents/`, `sessions/sessions-config.json`, and `sessions/tasks/` to `.claude/.backup-YYYYMMDD-HHMMSS/`
+- Disabling legacy `.claude/hooks/*` in favor of `sessions/hooks/*`
+- Config schema conversion with a machine-readable migration report
 
 <br>
 
