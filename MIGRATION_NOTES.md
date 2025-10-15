@@ -144,6 +144,7 @@ If mirrored in this repo, remove equivalent legacy files from `cc_sessions/comma
 ## Implementation Summary (Completed)
 
 ### Icon Style Migration (`use_nerd_fonts` → `icon_style`)
+
 - ✅ Updated `EnabledFeatures` dataclass in both Python and JavaScript
 - ✅ Automatic migration logic: `use_nerd_fonts=True` → `icon_style="nerd-fonts"`, `False` → `"ascii"`
 - ✅ All statusline icon logic updated to support 3 modes (nerd-fonts, unicode, ascii)
@@ -151,15 +152,18 @@ If mirrored in this repo, remove equivalent legacy files from `cc_sessions/comma
 - ✅ Helpful error message for invalid toggle attempts
 
 ### Workspace Mode Feature
+
 - ✅ Added `workspace_mode` boolean to EnabledFeatures (default: false)
 - ✅ Integrated into config features toggle system
 - ✅ Note: Task path logic guards can be added when WORKSPACE_ROOT is actually needed
 
 ### Service Documentation Agent
+
 - ✅ Replaced with upstream version from cc-sessions-main worktree
 - ✅ Expanded guidance for super-repo, mono-repo, and module patterns
 
 ### Test Coverage
+
 - ✅ Created `tests/test_icon_style.py` - Config migration and statusline tests
 - ✅ Expanded `tests/test_daic_enforcement.py` - 13 new DAIC matrix tests
 - ✅ Created `tests/test_sessions_commands.py` - Command surface integration tests
@@ -167,6 +171,7 @@ If mirrored in this repo, remove equivalent legacy files from `cc_sessions/comma
 - ✅ Manual testing confirms all icon_style operations work correctly
 
 ### Documentation
+
 - ✅ CHANGELOG.md updated with breaking changes and migration notes
 - ✅ Version bumped to v0.4.0 (unreleased)
 - ✅ Deprecation notices for `use_nerd_fonts`

@@ -778,7 +778,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
 
         const key = args[1].toLowerCase();
         const value = args[2];
-        
+
         let finalValue;
         editConfig(config => {
             if (key === 'icon_style') {
@@ -788,7 +788,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
                 }
                 config.features[key] = value;
                 finalValue = value;
-            
+
             } else if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'workspace_mode', 'auto_update'].includes(key)) {
                 // Boolean features
                 const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
