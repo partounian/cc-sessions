@@ -141,7 +141,7 @@ if 'CLAUDE_PROJECT_DIR' in os.environ:
 else:
     from cc_sessions.hooks.shared_state import load_config
 CONFIG = load_config()
-use_nerd_fonts = CONFIG.features.use_nerd_fonts if CONFIG else True
+icon_style = CONFIG.features.icon_style if CONFIG else "nerd-fonts"
 #!<
 
 #-#
@@ -234,7 +234,12 @@ else: bar_color = red
 #!> Construct progress bar string
 # Build progress bar string
 progress_bar = []
-context_icon = "󱃖 " if use_nerd_fonts else ""
+if icon_style == "nerd-fonts":
+    context_icon = "󱃖 "
+elif icon_style == "unicode":
+    context_icon = "📊 "
+else:  # ascii
+    context_icon = ""
 progress_bar.append(f"{reset}{l_gray}{context_icon} ")
 progress_bar.append(bar_color + ("█" * filled_blocks))
 progress_bar.append(gray + ("░" * empty_blocks))
@@ -259,7 +264,12 @@ if git_path:
         branch = subprocess.check_output(branch_cmd, stderr=subprocess.PIPE).decode().strip()
 
         if branch:
-            branch_icon = "󰘬 " if use_nerd_fonts else ""
+            if icon_style == "nerd-fonts":
+                branch_icon = "󰘬 "
+            elif icon_style == "unicode":
+                branch_icon = "🌿 "
+            else:  # ascii
+                branch_icon = ""
             git_branch_info = f"{l_gray}{branch_icon} {branch}{reset}"
 
             # Get upstream tracking status
@@ -285,10 +295,12 @@ if git_path:
             commit_cmd = ["git", "-C", str(Path(cwd)), "rev-parse", "--short", "HEAD"]
             commit = subprocess.check_output(commit_cmd, stderr=subprocess.PIPE).decode().strip()
             if commit:
-                if use_nerd_fonts:
+                if icon_style == "nerd-fonts":
                     # Broken link icon to indicate detached
                     git_branch_info = f"{l_gray}󰌺 @{commit}{reset}"
-                else:
+                elif icon_style == "unicode":
+                    git_branch_info = f"{l_gray}⚠️ @{commit}{reset}"
+                else:  # ascii
                     git_branch_info = f"{l_gray}@{commit} [detached]{reset}"
     except:
         git_branch_info = None
@@ -300,10 +312,12 @@ curr_task = STATE.current_task.name if STATE else None
 
 ## ===== CURRENT MODE ===== ##
 curr_mode = "Implement" if STATE.mode == Mode.GO else "Discuss"
-if use_nerd_fonts:
+if icon_style == "nerd-fonts":
     mode_icon = "󰷫 " if STATE.mode == Mode.GO else "󰭹 "
-else:
-    mode_icon = "🛠️: " if STATE.mode == Mode.GO else "💬:"
+elif icon_style == "unicode":
+    mode_icon = "🔨 " if STATE.mode == Mode.GO else "💬 "
+else:  # ascii
+    mode_icon = ""
 ##-##
 
 ## ===== COUNT EDITED & UNCOMMITTED ===== ##
@@ -338,12 +352,22 @@ if task_dir.exists() and task_dir.is_dir():
 ## ===== FINAL OUTPUT ===== ##
 # Line 1 - Progress bar | Task
 context_part = progress_bar_str if progress_bar_str else f"{gray}No context usage data{reset}"
-task_icon = "󰒓 " if use_nerd_fonts else "Task: "
+if icon_style == "nerd-fonts":
+    task_icon = "󰒓 "
+elif icon_style == "unicode":
+    task_icon = "📋 "
+else:  # ascii
+    task_icon = "Task: "
 task_part = f"{cyan}{task_icon} {curr_task}{reset}" if curr_task else f"{cyan}{task_icon} {gray}No Task{reset}"
 print(f"{context_part} | {task_part}")
 
 # Line 2 - Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch
-tasks_icon = "󰈙 " if use_nerd_fonts else ""
+if icon_style == "nerd-fonts":
+    tasks_icon = "󰈙 "
+elif icon_style == "unicode":
+    tasks_icon = "📁 "
+else:  # ascii
+    tasks_icon = ""
 # Build uncommitted section with optional upstream indicators
 uncommitted_parts = [f"{orange}✎ {total_edited}{reset}"]
 if upstream_info:

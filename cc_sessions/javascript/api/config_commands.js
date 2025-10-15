@@ -746,6 +746,9 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
                     branch_enforcement: features.branch_enforcement,
                     task_detection: features.task_detection,
                     auto_ultrathink: features.auto_ultrathink,
+                    icon_style: features.icon_style,
+                    workspace_mode: features.workspace_mode,
+                    auto_update: features.auto_update,
                     warn_85: features.context_warnings.warn_85,
                     warn_90: features.context_warnings.warn_90,
                 }
@@ -757,6 +760,9 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
             `  branch_enforcement: ${features.branch_enforcement}`,
             `  task_detection: ${features.task_detection}`,
             `  auto_ultrathink: ${features.auto_ultrathink}`,
+            `  icon_style: ${features.icon_style}`,
+            `  workspace_mode: ${features.workspace_mode}`,
+            `  auto_update: ${features.auto_update}`,
             `  warn_85: ${features.context_warnings.warn_85}`,
             `  warn_90: ${features.context_warnings.warn_90}`,
         ];
@@ -772,16 +778,28 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
 
         const key = args[1].toLowerCase();
         const value = args[2];
-        const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
-
+        
+        let finalValue;
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink', 'branch_enforcement'].includes(key)) {
-                // Safe features
+            if (key === 'icon_style') {
+                // String value with validation
+                if (!['nerd-fonts', 'ascii', 'unicode'].includes(value)) {
+                    throw new Error(`Invalid icon_style value: ${value}. Must be one of: nerd-fonts, ascii, unicode`);
+                }
+                config.features[key] = value;
+                finalValue = value;
+            
+            } else if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'workspace_mode', 'auto_update'].includes(key)) {
+                // Boolean features
+                const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
                 config.features[key] = boolValue;
+                finalValue = boolValue;
 
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 // Context warning features
+                const boolValue = ['true', '1', 'yes', 'on'].includes(value.toLowerCase());
                 config.features.context_warnings[key] = boolValue;
+                finalValue = boolValue;
 
             } else {
                 throw new Error(`Unknown feature: ${key}`);
@@ -789,9 +807,9 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         });
 
         if (jsonOutput) {
-            return { updated: key, value: boolValue };
+            return { updated: key, value: finalValue };
         }
-        return `Updated features.${key} to ${boolValue}`;
+        return `Updated features.${key} to ${finalValue}`;
 
     } else if (action === 'toggle') {
         if (args.length < 2) {
@@ -803,10 +821,12 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
         // Get current value
         const config = loadConfig();
         let currentValue;
-        if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
+        if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'workspace_mode', 'auto_update'].includes(key)) {
             currentValue = config.features[key];
         } else if (['warn_85', 'warn_90'].includes(key)) {
             currentValue = config.features.context_warnings[key];
+        } else if (key === 'icon_style') {
+            throw new Error("icon_style is not a boolean. Use 'set' action: config features set icon_style <nerd-fonts|ascii|unicode>");
         } else {
             throw new Error(`Unknown feature: ${key}`);
         }
@@ -816,7 +836,7 @@ function handleFeaturesCommand(args, jsonOutput = false, fromSlash = false) {
 
         // Save the toggled value
         editConfig(config => {
-            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts'].includes(key)) {
+            if (['task_detection', 'auto_ultrathink', 'branch_enforcement', 'workspace_mode', 'auto_update'].includes(key)) {
                 config.features[key] = newValue;
             } else if (['warn_85', 'warn_90'].includes(key)) {
                 config.features.context_warnings[key] = newValue;

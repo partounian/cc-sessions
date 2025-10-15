@@ -354,7 +354,8 @@ class EnabledFeatures:
     branch_enforcement: bool = True
     task_detection: bool = True
     auto_ultrathink: bool = True
-    use_nerd_fonts: bool = True
+    icon_style: str = "nerd-fonts"  # Options: "nerd-fonts", "ascii", "unicode"
+    workspace_mode: bool = False  # If True, allows tasks in WORKSPACE_ROOT
     auto_update: bool = False
     context_warnings: ContextWarnings = field(default_factory=ContextWarnings)
 
@@ -363,11 +364,20 @@ class EnabledFeatures:
         cw_data = d.get("context_warnings", {})
         if cw_data and isinstance(cw_data, dict): cw = ContextWarnings(**cw_data)
         else: cw = ContextWarnings()
+
+        # Migration: use_nerd_fonts → icon_style
+        icon_style = d.get("icon_style")
+        if icon_style is None and "use_nerd_fonts" in d:
+            icon_style = "nerd-fonts" if d["use_nerd_fonts"] else "ascii"
+        if icon_style is None:
+            icon_style = "nerd-fonts"
+
         return cls(
             branch_enforcement=d.get("branch_enforcement", True),
             task_detection=d.get("task_detection", True),
             auto_ultrathink=d.get("auto_ultrathink", True),
-            use_nerd_fonts=d.get("use_nerd_fonts", True),
+            icon_style=icon_style,
+            workspace_mode=d.get("workspace_mode", False),
             auto_update=d.get("auto_update", False),
             context_warnings=cw
         )

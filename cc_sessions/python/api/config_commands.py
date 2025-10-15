@@ -123,7 +123,7 @@ def format_config_human(config) -> str:
 def handle_phrases_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
     """
     Handle trigger phrase commands.
-    
+
     Usage:
         config phrases list [category]
         config phrases add <category> "<phrase>"
@@ -137,7 +137,7 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
         phrases = config.trigger_phrases.list_phrases()
         if json_output: return {"phrases": phrases}
         return format_phrases_human(phrases)
-    
+
     action = args[0].lower()
 
     # Map friendly category names for slash commands
@@ -160,7 +160,7 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
         else: phrases = config.trigger_phrases.list_phrases() # List all
         if json_output: return {"phrases": phrases}
         return format_phrases_human(phrases)
-    
+
     elif action == 'add':
         if len(args) < 2:
             if from_slash:
@@ -183,13 +183,13 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
             raise ValueError("Missing phrase")
 
         phrase = ' '.join(args[2:])
-        
+
         with edit_config() as config: added = config.trigger_phrases.add_phrase(category, phrase)
-        
+
         if json_output: return {"added": added, "category": category, "phrase": phrase}
         if added: return f"Added '{phrase}' to {category}"
         else: return f"'{phrase}' already exists in {category}"
-    
+
     elif action == 'remove':
         if len(args) < 2:
             if from_slash:
@@ -212,13 +212,13 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
             raise ValueError("Missing phrase")
 
         phrase = ' '.join(args[2:])
-        
+
         with edit_config() as config: removed = config.trigger_phrases.remove_phrase(category, phrase)
-        
+
         if json_output: return {"removed": removed, "category": category, "phrase": phrase}
         if removed: return f"Removed '{phrase}' from {category}"
         else: return f"'{phrase}' not found in {category}"
-    
+
     elif action == 'clear':
         if len(args) < 2: raise ValueError("Usage: config phrases clear <category>")
         category = args[1]
@@ -228,7 +228,7 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
             setattr(config.trigger_phrases, category_enum.value, [])
         if json_output: return {"cleared": category}
         return f"Cleared all phrases in {category}"
-    
+
     elif action == 'show':
         # Show specific category
         if len(args) < 2: raise ValueError("Usage: config phrases show <category>")
@@ -237,7 +237,7 @@ def handle_phrases_command(args: List[str], json_output: bool = False, from_slas
         phrases = config.trigger_phrases.list_phrases(category)
         if json_output: return {"phrases": phrases}
         return format_phrases_human(phrases)
-    
+
     else:
         if from_slash: return f"Unknown trigger command: {action}\n\n{format_phrases_help()}"
         raise ValueError(f"Unknown phrases action: {action}. Valid actions: list, add, remove, clear, show")
@@ -547,7 +547,7 @@ def format_env_missing_value(key: str) -> str:
 #!<
 
 #!> Feature toggles handlers
-def handle_features_command(args: List[str], json_output: bool = False) -> Any:
+def handle_features_command(args: List[str], json_output: bool = False, from_slash: bool = False) -> Any:
     """
     Handle feature toggle commands.
 
@@ -560,53 +560,69 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
         # Show feature toggles
         config = load_config()
         features = config.features
-        
+
         if json_output:
             return {
                 "features": {
                     "branch_enforcement": features.branch_enforcement,
                     "task_detection": features.task_detection,
                     "auto_ultrathink": features.auto_ultrathink,
+                    "icon_style": features.icon_style,
+                    "workspace_mode": features.workspace_mode,
+                    "auto_update": features.auto_update,
                     "warn_85": features.context_warnings.warn_85,
                     "warn_90": features.context_warnings.warn_90,
                 }
             }
-        
+
         lines = [
             "Feature Toggles:",
             f"  branch_enforcement: {features.branch_enforcement}",
             f"  task_detection: {features.task_detection}",
             f"  auto_ultrathink: {features.auto_ultrathink}",
+            f"  icon_style: {features.icon_style}",
+            f"  workspace_mode: {features.workspace_mode}",
+            f"  auto_update: {features.auto_update}",
             f"  warn_85: {features.context_warnings.warn_85}",
             f"  warn_90: {features.context_warnings.warn_90}",
         ]
         return "\n".join(lines)
-    
+
     action = args[0].lower()
-    
+
     if action == 'set':
         if len(args) < 3:
             raise ValueError("Usage: config features set <key> <value>")
-        
+
         key = args[1].lower()
         value = args[2]
-        bool_value = value.lower() in ['true', '1', 'yes', 'on']
-        
+
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement']:
-                # Safe features
+            if key == 'icon_style':
+                # String value with validation
+                if value not in ['nerd-fonts', 'ascii', 'unicode']:
+                    raise ValueError(f"Invalid icon_style value: {value}. Must be one of: nerd-fonts, ascii, unicode")
+                setattr(config.features, key, value)
+                final_value = value
+
+            elif key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'workspace_mode', 'auto_update']:
+                # Boolean features
+                bool_value = value.lower() in ['true', '1', 'yes', 'on']
                 setattr(config.features, key, bool_value)
+                final_value = bool_value
 
             elif key in ['warn_85', 'warn_90']:
                 # Context warning features
+                bool_value = value.lower() in ['true', '1', 'yes', 'on']
                 setattr(config.features.context_warnings, key, bool_value)
+                final_value = bool_value
 
             else:
                 raise ValueError(f"Unknown feature: {key}")
-        
+
         if json_output:
-            return {"updated": key, "value": bool_value}
-        return f"Updated features.{key} to {bool_value}"
+            return {"updated": key, "value": final_value}
+        return f"Updated features.{key} to {final_value}"
 
     elif action == 'toggle':
         if len(args) < 2:
@@ -616,10 +632,12 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Get current value
         config = load_config()
-        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
+        if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'workspace_mode', 'auto_update']:
             current_value = getattr(config.features, key)
         elif key in ['warn_85', 'warn_90']:
             current_value = getattr(config.features.context_warnings, key)
+        elif key == 'icon_style':
+            raise ValueError("icon_style is not a boolean. Use 'set' action: config features set icon_style <nerd-fonts|ascii|unicode>")
         else:
             raise ValueError(f"Unknown feature: {key}")
 
@@ -628,7 +646,7 @@ def handle_features_command(args: List[str], json_output: bool = False) -> Any:
 
         # Save the toggled value
         with edit_config() as config:
-            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'use_nerd_fonts']:
+            if key in ['task_detection', 'auto_ultrathink', 'branch_enforcement', 'workspace_mode', 'auto_update']:
                 setattr(config.features, key, new_value)
             elif key in ['warn_85', 'warn_90']:
                 setattr(config.features.context_warnings, key, new_value)
@@ -891,30 +909,30 @@ def validate_config(json_output: bool = False) -> Any:
     try:
         config = load_config()
         # The load itself validates the structure
-        
+
         # Additional validation checks
         issues = []
-        
+
         # Check for empty required fields
         if not config.git_preferences.default_branch:
             issues.append("Git default_branch is empty")
-        
+
         if not config.environment.developer_name:
             issues.append("Developer name is empty")
-        
+
         # Check for at least one implementation trigger phrase
         if not config.trigger_phrases.implementation_mode:
             issues.append("No implementation mode trigger phrases defined")
-        
+
         if issues:
             if json_output:
                 return {"valid": False, "issues": issues}
             return "Configuration issues found:\n" + "\n".join(f"  - {issue}" for issue in issues)
-        
+
         if json_output:
             return {"valid": True}
         return "Configuration is valid"
-        
+
     except Exception as e:
         if json_output:
             return {"valid": False, "error": str(e)}

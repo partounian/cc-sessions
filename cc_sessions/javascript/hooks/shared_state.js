@@ -312,7 +312,18 @@ class EnabledFeatures {
         this.branch_enforcement = data.branch_enforcement !== undefined ? data.branch_enforcement : true;
         this.task_detection = data.task_detection !== undefined ? data.task_detection : true;
         this.auto_ultrathink = data.auto_ultrathink !== undefined ? data.auto_ultrathink : true;
-        this.use_nerd_fonts = data.use_nerd_fonts !== undefined ? data.use_nerd_fonts : true;
+
+        // Migration: use_nerd_fonts → icon_style
+        let iconStyle = data.icon_style;
+        if (iconStyle === undefined && 'use_nerd_fonts' in data) {
+            iconStyle = data.use_nerd_fonts ? 'nerd-fonts' : 'ascii';
+        }
+        if (iconStyle === undefined) {
+            iconStyle = 'nerd-fonts';
+        }
+        this.icon_style = iconStyle;
+
+        this.workspace_mode = data.workspace_mode !== undefined ? data.workspace_mode : false;
         this.auto_update = data.auto_update !== undefined ? data.auto_update : false;
         this.context_warnings = data.context_warnings instanceof ContextWarnings
             ? data.context_warnings

@@ -155,9 +155,9 @@ function main() {
         });
     }
 
-    // Load config for nerd fonts preference
+    // Load config for icon style preference
     const config = loadConfig();
-    const useNerdFonts = config?.features?.use_nerd_fonts !== false;
+    const iconStyle = config?.features?.icon_style || 'nerd-fonts';
 
     // Pull context length from transcript
     let contextLength = null;
@@ -240,7 +240,7 @@ function main() {
     }
 
     // Build progress bar string
-    const contextIcon = useNerdFonts ? '󱃖 ' : '';
+    const contextIcon = iconStyle === 'nerd-fonts' ? '󱃖 ' : (iconStyle === 'unicode' ? '📊 ' : '');
     const progressBar =
         barColor + '█'.repeat(filledBlocks) +
         gray + '░'.repeat(emptyBlocks) +
@@ -257,7 +257,7 @@ function main() {
             const branch = execSync(`git -C "${cwd}" branch --show-current`,
                                    { encoding: 'utf-8' }).trim();
             if (branch) {
-                const branchIcon = useNerdFonts ? '󰘬 ' : '';
+                const branchIcon = iconStyle === 'nerd-fonts' ? '󰘬 ' : (iconStyle === 'unicode' ? '🌿 ' : '');
                 gitBranchInfo = `${lGray}${branchIcon}${branch}${reset}`;
 
                 // Get upstream tracking status
@@ -282,9 +282,11 @@ function main() {
                 const commit = execSync(`git -C "${cwd}" rev-parse --short HEAD`,
                                        { encoding: 'utf-8' }).trim();
                 if (commit) {
-                    if (useNerdFonts) {
+                    if (iconStyle === 'nerd-fonts') {
                         // Broken link icon to indicate detached
                         gitBranchInfo = `${lGray}󰌺 @${commit}${reset}`;
+                    } else if (iconStyle === 'unicode') {
+                        gitBranchInfo = `${lGray}⚠️ @${commit}${reset}`;
                     } else {
                         gitBranchInfo = `${lGray}@${commit} [detached]${reset}`;
                     }
@@ -300,9 +302,14 @@ function main() {
 
     // Current mode
     const currMode = state?.mode === Mode.GO ? 'Implementation' : 'Discussion';
-    const modeIcon = useNerdFonts ?
-        (state?.mode === Mode.GO ? '󰷫 ' : '󰭹 ') :
-        (state?.mode === Mode.GO ? 'I: ' : 'D: ');
+    let modeIcon;
+    if (iconStyle === 'nerd-fonts') {
+        modeIcon = state?.mode === Mode.GO ? '󰷫 ' : '󰭹 ';
+    } else if (iconStyle === 'unicode') {
+        modeIcon = state?.mode === Mode.GO ? '🔨 ' : '💬 ';
+    } else {
+        modeIcon = '';
+    }
 
     // Count edited & uncommitted files
     let totalEdited = 0;
@@ -346,14 +353,14 @@ function main() {
     // Final output
     // Line 1 - Progress bar | Task
     const contextPart = progressBar || `${gray}No context usage data${reset}`;
-    const taskIcon = useNerdFonts ? '󰒓 ' : 'Task: ';
+    const taskIcon = iconStyle === 'nerd-fonts' ? '󰒓 ' : (iconStyle === 'unicode' ? '📋 ' : 'Task: ');
     const taskPart = currTask ?
         `${cyan}${taskIcon}${currTask}${reset}` :
         `${cyan}${taskIcon}${gray}No Task${reset}`;
     console.log(contextPart + ' | ' + taskPart);
 
     // Line 2 - Mode | Edited & Uncommitted with upstream | Open Tasks | Git branch
-    const tasksIcon = useNerdFonts ? '󰈙 ' : '';
+    const tasksIcon = iconStyle === 'nerd-fonts' ? '󰈙 ' : (iconStyle === 'unicode' ? '📁 ' : '');
     // Build uncommitted section with optional upstream indicators
     const uncommittedParts = [`${orange}✎ ${totalEdited}${reset}`];
     if (upstreamInfo) {
