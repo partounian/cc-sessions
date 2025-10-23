@@ -1,0 +1,26 @@
+{
+  "developer_name": "the developer",
+  "trigger_phrases": [
+    "make it so",
+    "run that",
+    "go ahead",
+    "yert"
+  ],
+  "blocked_tools": [
+    "Edit",
+    "Write",
+    "MultiEdit",
+    "NotebookEdit"
+  ],
+  "task_detection": {
+    "enabled": true
+  },
+  "branch_enforcement": {
+    "enabled": true
+  },
+  "api_mode": false,
+  "workspace": {
+    "include_repositories": [],
+    "exclude_patterns": []
+  }
+}

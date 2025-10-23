@@ -1,0 +1,22 @@
+{
+  "session_info": {},
+  "tool_usage": {},
+  "agent_performance": {
+    "active_agents": [],
+    "agent_execution_times": {},
+    "agent_success_rates": {},
+    "agent_context_usage": {},
+    "agent_output_quality": {}
+  },
+  "context_usage": {},
+  "workflow_metrics": {},
+  "error_metrics": {},
+  "performance_metrics": {
+    "session_duration_seconds": 0,
+    "average_tool_execution_time": 0,
+    "total_operations": 0,
+    "operations_per_minute": 0,
+    "memory_usage_mb": 0,
+    "cpu_usage_percent": 0
+  }
+}

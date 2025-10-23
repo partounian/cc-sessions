@@ -1,0 +1,70 @@
+{
+  "session_info": {
+    "session_id": "8b5330c6",
+    "start_time": "2025-09-22T14:17:36.479669",
+    "end_time": "2025-09-22T14:17:36.636389",
+    "duration_seconds": 0.156745,
+    "daic_mode": "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)",
+    "current_task": {
+      "task": "t1",
+      "branch": "feature/t1",
+      "services": [
+        "svc"
+      ],
+      "updated": "2025-09-17T16:02:14.423087"
+    }
+  },
+  "tool_usage": {
+    "total_tools_used": 19,
+    "tools_by_type": {
+      "Bash": 19
+    },
+    "successful_tools": 19,
+    "failed_tools": 0,
+    "blocked_tools": 0,
+    "tool_execution_times": {},
+    "most_used_tools": [
+      [
+        "Bash",
+        19
+      ]
+    ]
+  },
+  "agent_performance": {
+    "active_agents": [],
+    "agent_execution_times": {},
+    "agent_success_rates": {},
+    "agent_context_usage": {},
+    "agent_output_quality": {}
+  },
+  "context_usage": {
+    "total_tokens_used": 0,
+    "context_warnings": 0,
+    "compaction_events": 18,
+    "context_efficiency": 0,
+    "peak_context_usage": 0,
+    "context_sources": []
+  },
+  "workflow_metrics": {
+    "daic_transitions": 0,
+    "task_completions": 0,
+    "workflow_phase_changes": 0,
+    "enforcement_actions": 0,
+    "workflow_efficiency": 0
+  },
+  "error_metrics": {
+    "total_errors": 0,
+    "errors_by_type": {},
+    "error_recovery_rate": 0,
+    "critical_errors": 0,
+    "warning_count": 0
+  },
+  "performance_metrics": {
+    "session_duration_seconds": 0.15769,
+    "average_tool_execution_time": 0,
+    "total_operations": 0,
+    "operations_per_minute": 0.0,
+    "memory_usage_mb": 0,
+    "cpu_usage_percent": 0
+  }
+}

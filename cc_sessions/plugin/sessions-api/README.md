@@ -1,0 +1,1 @@
+# Sessions API Plugin (MVP)\n\nExpose basic Sessions API UX via slash commands.\n\n- commands/: state/config/todos helpers\n\n> These surface existing cc-sessions capabilities; logic remains in hooks/API.\n

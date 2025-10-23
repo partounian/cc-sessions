@@ -14,33 +14,65 @@ This file provides collaborative guidance and philosophy when using the Claude C
 ## Task Management
 
 ### Best Practices
-- One task at a time (check .claude/state/current_task.json)
-- Update work logs as you progress  
+- One task at a time (check sessions/state/current-task.json)
+- Work logs are maintained by the logging agent  
 - Mark todos as completed immediately after finishing
 
 ### Quick State Checks
 ```bash
-cat .claude/state/current_task.json  # Shows current task
+cat sessions/state/current-task.json  # Shows current task
 git branch --show-current             # Current branch/task
 ```
 
-### current_task.json Format
+### current-task.json Format
 
-**ALWAYS use this exact format for .claude/state/current_task.json:**
+**ALWAYS use this exact format for sessions/state/current-task.json:**
+
+If the task is a directory with README.md and subtasks:
 ```json
 {
-  "task": "task-name",        // Just the task name, NO path, NO .md extension
-  "branch": "feature/branch", // Git branch (NOT "branch_name")
-  "services": ["service1"],   // Array of affected services/modules
-  "updated": "2025-08-27"     // Current date in YYYY-MM-DD format
+  "task": "task-directory/subtask-or-README.md"
 }
 ```
 
-**Common mistakes to avoid:**
-- ❌ Using `"task_file"` instead of `"task"`
-- ❌ Using `"branch_name"` instead of `"branch"`  
-- ❌ Including path like `"tasks/m-task.md"`
-- ❌ Including `.md` file extension
+If the task is a simple task file:
+```json
+{
+  "task": "task-file.md"
+}
+```
+
+## Available API Commands
+
+You can use these commands via the Bash tool for session management:
+
+**State Management:**
+```bash
+sessions state              # Show full state information
+sessions state task         # Show current task details
+sessions state todos        # Show active and stashed todos
+sessions state flags        # Show session flags
+sessions status             # Human-readable status summary
+sessions mode discussion    # Return to discussion mode (one-way safety)
+sessions flags clear        # Clear all session flags
+```
+
+**Configuration Management:**
+```bash
+sessions config                                      # Show current configuration
+sessions config phrases list <category>              # List trigger phrases
+sessions config phrases add <category> "<phrase>"    # Add trigger phrase
+sessions config phrases remove <category> "<phrase>" # Remove trigger phrase
+sessions config git show                             # Show git preferences
+sessions config env show                             # Show environment settings
+```
+
+**Protocol Loading:**
+```bash
+sessions protocol startup-load <task-file>  # Load task and display content
+```
+
+Note: These commands respect DAIC mode restrictions. Some operations may be blocked in discussion mode.
 
 ## Using Specialized Agents
 

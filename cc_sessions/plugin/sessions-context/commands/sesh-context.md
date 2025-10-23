@@ -1,0 +1,1 @@
+# sesh-context\n\nContext management helpers.\n\n## Usage\n\n- /sesh-context precompact — run pre-compaction sequence\n- /sesh-context manifest — show last context manifest summary\n\n> Delegates to cc-sessions hooks for actual work.\n

@@ -1,0 +1,1 @@
+# Lifecycle Auditor Agent\n\nReview recent sessions-events.jsonl and suggest cleanup or next steps.\n

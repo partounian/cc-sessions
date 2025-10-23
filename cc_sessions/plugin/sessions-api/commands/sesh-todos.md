@@ -1,0 +1,1 @@
+# sesh-todos\n\nTodos helpers.\n\n## Usage\n\n- /sesh-todos list — list active todos\n- /sesh-todos clear — clear active todos (when appropriate)\n\n> Under DAIC, only implement approved todos.\n

@@ -1,0 +1,74 @@
+{
+  "timestamp": "2025-09-24T12:40:02.363413",
+  "compaction_id": "0e9cf415",
+  "agent_context": {
+    "active_agents": [],
+    "agent_states": {},
+    "agent_results": {},
+    "context_requirements": {
+      "current_task": {
+        "task": "t1",
+        "branch": "feature/t1",
+        "services": [
+          "svc"
+        ],
+        "updated": "2025-09-17T16:02:14.423087"
+      },
+      "context_sources": [
+        "current_task",
+        "daic_mode"
+      ],
+      "relevance_filters": {
+        "current_task_relevance": true,
+        "agent_context_relevance": true,
+        "workflow_state_relevance": true
+      }
+    },
+    "agent_dependencies": {}
+  },
+  "workflow_state": {
+    "daic_mode": "discussion",
+    "current_phase": "discussion",
+    "workflow_progress": {
+      "task_id": "t1",
+      "task_title": "t1",
+      "progress_percentage": 0
+    },
+    "enforcement_state": {
+      "enforcement_active": false
+    }
+  },
+  "task_context": {
+    "current_task": {
+      "task": "t1",
+      "branch": "feature/t1",
+      "services": [
+        "svc"
+      ],
+      "updated": "2025-09-17T16:02:14.423087"
+    },
+    "task_history": [],
+    "related_files": [],
+    "dependencies": []
+  },
+  "recovery_instructions": [
+    "Resume workflow in discussion phase",
+    "Continue with task: t1"
+  ],
+  "priority_context": {
+    "critical_files": [],
+    "active_agents": [],
+    "current_task": {
+      "task": "t1",
+      "branch": "feature/t1",
+      "services": [
+        "svc"
+      ],
+      "updated": "2025-09-17T16:02:14.423087"
+    },
+    "workflow_state": {
+      "daic_mode": "discussion",
+      "current_phase": "discussion"
+    }
+  }
+}

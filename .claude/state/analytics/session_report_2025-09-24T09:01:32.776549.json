@@ -1,0 +1,22 @@
+{
+  "session_summary": {
+    "duration_minutes": 0.0,
+    "tools_used": 0,
+    "success_rate": 0.0,
+    "daic_mode": "unknown",
+    "current_task": "No active task"
+  },
+  "performance_analysis": {
+    "efficiency_score": 40.0,
+    "bottlenecks": [],
+    "optimization_opportunities": [],
+    "resource_usage": {
+      "context_usage_pattern": "efficient",
+      "tool_usage_pattern": "needs_improvement",
+      "agent_utilization": "moderate"
+    }
+  },
+  "recommendations": [],
+  "insights": [],
+  "timestamp": "2025-09-24T09:01:32.776548"
+}

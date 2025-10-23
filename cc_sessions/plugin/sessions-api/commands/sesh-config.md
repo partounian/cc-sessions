@@ -1,0 +1,1 @@
+# sesh-config\n\nConfiguration helpers.\n\n## Usage\n\n- /sesh-config view — show key configuration values\n- /sesh-config triggers — list DAIC trigger phrases\n\n> Use the installer/API for full configuration management.\n

@@ -1,0 +1,1 @@
+# Context Summarizer Agent\n\nSummarize key files and state to prepare for compaction/resume.\n

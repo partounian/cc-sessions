@@ -1,0 +1,27 @@
+{
+  "session_summary": {
+    "duration_minutes": 0.0012883333333333332,
+    "tools_used": 39,
+    "success_rate": 100.0,
+    "daic_mode": "You are now in Discussion Mode and should focus on discussing and investigating with the user (no edit-based tools)",
+    "current_task": "No active task"
+  },
+  "performance_analysis": {
+    "efficiency_score": 60.0,
+    "bottlenecks": [],
+    "optimization_opportunities": [
+      "Improve context efficiency through better filtering"
+    ],
+    "resource_usage": {
+      "context_usage_pattern": "inefficient",
+      "tool_usage_pattern": "efficient",
+      "agent_utilization": "moderate"
+    }
+  },
+  "recommendations": [],
+  "insights": [
+    "Most frequently used tool: Bash (39 times)",
+    "Context compaction occurred 38 times during session"
+  ],
+  "timestamp": "2025-09-24T08:59:57.245307"
+}
