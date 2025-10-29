@@ -173,6 +173,7 @@ class CCTools(str, Enum):
     WEBFETCH = "WebFetch"
     TASK = "Task"
     TODOWRITE = "TodoWrite"
+    PLAN = "Plan"
     EXITPLANMODE = "ExitPlanMode"
 #!<
 
@@ -186,6 +187,7 @@ class SessionsProtocol(str, Enum):
 class Mode(str, Enum):
     NO = "discussion"
     GO = "implementation"
+    PLAN = "plan"
 
 class TodoStatus(str, Enum):
     PENDING = "pending"

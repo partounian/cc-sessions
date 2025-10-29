@@ -98,6 +98,7 @@ const CCTools = {
     WEBFETCH: 'WebFetch',
     TASK: 'Task',
     TODOWRITE: 'TodoWrite',
+    PLAN: 'Plan',
     EXITPLANMODE: 'ExitPlanMode'
 };
 
@@ -110,7 +111,8 @@ const SessionsProtocol = {
 
 const Mode = {
     NO: 'discussion',
-    GO: 'implementation'
+    GO: 'implementation',
+    PLAN: 'plan'
 };
 
 const TodoStatus = {
@@ -1157,6 +1159,7 @@ module.exports = {
     SessionsTodos,
     APIPerms,
     SessionsState,
+    StashOccupiedError,
 
     // Functions
     findGitRepo,

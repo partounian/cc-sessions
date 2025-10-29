@@ -92,15 +92,31 @@ const STATE = loadState();
 
 // Get kickstart metadata (should ALWAYS exist if this hook is running)
 const kickstartMeta = STATE.metadata?.kickstart;
+
+// NEW: Handle missing metadata gracefully (cleanup window detection)
 if (!kickstartMeta) {
-    // This is a BUG - fail loudly
-    console.log(JSON.stringify({
-        hookSpecificOutput: {
-            hookEventName: 'SessionStart',
-            additionalContext: 'ERROR: kickstart_session_start hook fired but no kickstart metadata found. This is an installer bug.'
-        }
-    }));
-    process.exit(1);
+    // Metadata missing - check if we're in cleanup window
+    // If hook file still exists but metadata gone, likely completed + cleanup in progress
+    const hookFiles = [
+        path.join(PROJECT_ROOT, 'sessions', 'hooks', 'kickstart_session_start.js'),
+        path.join(PROJECT_ROOT, 'sessions', 'hooks', 'kickstart_session_start.py')
+    ];
+
+    const hookExists = hookFiles.some(hookPath => fs.existsSync(hookPath));
+
+    if (hookExists) {
+        // Hook exists but metadata gone = cleanup in progress, exit silently
+        process.exit(0);
+    } else {
+        // No hook, no metadata = shouldn't be here, but exit silently anyway
+        process.exit(0);
+    }
+}
+
+// NEW: Check if kickstart is marked complete
+if (kickstartMeta.onboarding_complete === true) {
+    // Kickstart completed - exit silently, allow normal session
+    process.exit(0);
 }
 
 const mode = kickstartMeta.mode;  // 'full' or 'subagents'
@@ -134,6 +150,8 @@ if (mode === 'full') {
 
 // Initialize sequence on first run
 let protocolContent;
+let currentIndex = kickstartMeta.current_index ?? 0;
+
 if (!('sequence' in kickstartMeta)) {
     const { editState } = require(sharedStatePath);
     editState((s) => {
@@ -142,13 +160,43 @@ if (!('sequence' in kickstartMeta)) {
         s.metadata.kickstart.completed = [];
         return s;
     });
-
+    currentIndex = 0;
     protocolContent = loadProtocolFile(`kickstart/${sequence[0]}`);
 } else {
     // Load current protocol from sequence
-    const currentIndex = kickstartMeta.current_index ?? 0;
     protocolContent = loadProtocolFile(`kickstart/${sequence[currentIndex]}`);
 }
+//!<
+
+//!> 2.5. Check cooldown and progress-aware logic
+const lastShown = kickstartMeta.last_shown;
+const now = Date.now();
+const oneHourMs = 60 * 60 * 1000; // 1 hour in milliseconds
+
+// If kickstart is in progress (current_index > 0), check cooldown
+if (currentIndex > 0 && lastShown) {
+    const lastShownTime = new Date(lastShown).getTime();
+    const hoursSinceShown = (now - lastShownTime) / oneHourMs;
+
+    // If shown within last hour, skip instructions but update last_active
+    if (hoursSinceShown < 1) {
+        const { editState } = require(sharedStatePath);
+        editState((s) => {
+            s.metadata.kickstart.last_active = new Date().toISOString();
+            return s;
+        });
+        process.exit(0); // Exit silently, allow normal session
+    }
+}
+
+// If we reach here, we should show instructions
+// Update last_shown timestamp when displaying instructions
+const { editState } = require(sharedStatePath);
+editState((s) => {
+    s.metadata.kickstart.last_shown = new Date().toISOString();
+    s.metadata.kickstart.last_active = new Date().toISOString();
+    return s;
+});
 //!<
 
 //!> 3. Append user instructions and output

@@ -198,9 +198,12 @@ def complete_kickstart(json_output: bool = False) -> Any:
     if task_file.exists():
         task_file.unlink()
 
-    # 4. Clear kickstart metadata
+    # 4. Mark kickstart complete (don't delete metadata yet - manual cleanup)
     with edit_state() as s:
-        s.metadata.pop('kickstart', None)
+        if 'kickstart' in s.metadata:
+            s.metadata['kickstart']['onboarding_complete'] = True
+            s.metadata['kickstart']['completed_at'] = datetime.now().isoformat()
+            # Keep metadata for hook detection during manual cleanup window
 
     # Generate language-specific cleanup instructions based on which hook was found
     if is_python:

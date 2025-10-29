@@ -25,6 +25,14 @@ def setup_discussion(tmp: Path) -> None:
     (tmp / "sessions" / "sessions-state.json").write_text(json.dumps(state))
 
 
+def read_state(tmp: Path) -> dict:
+    return json.loads((tmp / "sessions" / "sessions-state.json").read_text())
+
+
+def write_state(tmp: Path, state: dict) -> None:
+    (tmp / "sessions" / "sessions-state.json").write_text(json.dumps(state))
+
+
 def test_block_write_tool_in_discussion(tmp_path: Path):
     setup_discussion(tmp_path)
     payload = {"tool_name": "Write", "tool_input": {"file_path": "x.py"}}
@@ -62,6 +70,24 @@ def test_block_awk_output_redirect_in_discussion(tmp_path: Path):
     """awk '{print > "out"}' file → blocked"""
     setup_discussion(tmp_path)
     payload = {"tool_name": "Bash", "tool_input": {"command": "awk '{print > \"out\"}' input.txt"}}
+    res = run_enforce(tmp_path, payload)
+    assert res.returncode == 2
+
+
+def test_block_awk_output_redirect_with_spaces(tmp_path: Path):
+    """awk '{print > "out"}' file → blocked (tests regex fix for \s* pattern)"""
+    setup_discussion(tmp_path)
+    # Test with spaces between > and filename (the bug case)
+    payload = {"tool_name": "Bash", "tool_input": {"command": "awk '{print >  \"out\"}' input.txt"}}
+    res = run_enforce(tmp_path, payload)
+    assert res.returncode == 2
+
+
+def test_block_awk_append_redirect_with_spaces(tmp_path: Path):
+    """awk '{print >> "out"}' file → blocked (tests regex fix for \s* pattern)"""
+    setup_discussion(tmp_path)
+    # Test with spaces between >> and filename (the bug case)
+    payload = {"tool_name": "Bash", "tool_input": {"command": "awk '{print >>    \"out\"}' input.txt"}}
     res = run_enforce(tmp_path, payload)
     assert res.returncode == 2
 
@@ -137,4 +163,30 @@ def test_block_mv_in_discussion(tmp_path: Path):
     res = run_enforce(tmp_path, payload)
     assert res.returncode == 2
 
+
+def test_plan_mode_round_trip(tmp_path: Path):
+    setup_discussion(tmp_path)
+    # Seed an active todo so we can confirm it is stashed/restored
+    state = read_state(tmp_path)
+    state.setdefault("todos", {})
+    state["todos"]["active"] = [{"content": "Draft plan", "status": "pending"}]
+    write_state(tmp_path, state)
+
+    # Enter plan mode
+    res = run_enforce(tmp_path, {"tool_name": "Plan", "tool_input": {}})
+    assert res.returncode == 0
+    state = read_state(tmp_path)
+    assert state["mode"] == "plan"
+    assert state.get("metadata", {}).get("plan_prev_mode") == "discussion"
+    assert state["todos"].get("active", []) == []
+    assert state["todos"].get("stashed", [])
+
+    # Exit plan mode
+    res = run_enforce(tmp_path, {"tool_name": "ExitPlanMode", "tool_input": {}})
+    assert res.returncode == 0
+    state = read_state(tmp_path)
+    assert state["mode"] == "discussion"
+    assert "plan_prev_mode" not in state.get("metadata", {})
+    active_todos = state["todos"].get("active", [])
+    assert active_todos and active_todos[0]["content"] == "Draft plan"
 

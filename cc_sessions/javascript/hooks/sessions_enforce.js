@@ -200,7 +200,7 @@ function checkCommandArguments(parts) {
     if (['awk', 'gawk', 'mawk'].includes(cmd)) {
         const script = args.join(' ');
         // Check for output redirection within awk script
-        if (/>s*["'].*["']/.test(script) || />>s*["'].*["']/.test(script)) {
+        if (/>\s*["'].*["']/.test(script) || />>\s*["'].*["']/.test(script)) {
             return false;
         }
         if (script.includes('print >') || script.includes('print >>') ||
@@ -244,7 +244,7 @@ function checkCommandArguments(parts) {
 }
 
 // Check if a bash command is read-only (no writes, no redirections)
-function isBashReadOnly(command, extrasafe = CONFIG.blocked_actions.extrasafe || true) {
+function isBashReadOnly(command, extrasafeOverride) {
     /*Determine if a bash command is read-only.
 
     Enhanced to check command arguments for operations like:
@@ -256,6 +256,10 @@ function isBashReadOnly(command, extrasafe = CONFIG.blocked_actions.extrasafe ||
     Args:
         command (str): The bash command to evaluate.
         extrasafe (bool): If True, unrecognized commands are treated as write-like.*/
+
+    const extrasafe = typeof extrasafeOverride === 'boolean'
+        ? extrasafeOverride
+        : (CONFIG.blocked_actions.extrasafe !== undefined ? CONFIG.blocked_actions.extrasafe : true);
 
     const s = (command || '').trim();
     if (!s) return true;
@@ -280,7 +284,7 @@ function isBashReadOnly(command, extrasafe = CONFIG.blocked_actions.extrasafe ||
                 parts.push(match[1] || match[2] || match[0]);
             }
         } catch (error) {
-            return !CONFIG.blocked_actions.extrasafe;
+            return !extrasafe;
         }
 
         if (parts.length === 0) continue;
@@ -323,7 +327,7 @@ function isBashReadOnly(command, extrasafe = CONFIG.blocked_actions.extrasafe ||
         if (CONFIG.blocked_actions.bash_read_patterns.includes(first)) continue;  // Allow custom readonly commands
 
         // If extrasafe is on and command not in readonly list, block it
-        if (!READONLY_FIRST.has(first) && CONFIG.blocked_actions.extrasafe) return false;
+        if (!READONLY_FIRST.has(first) && extrasafe) return false;
     }
 
     return true;
@@ -339,9 +343,63 @@ if (isCIEnvironment()) {
     process.exit(0);
 }
 
+// Plan mode entry handling
+if (toolName === CCTools.PLAN && !STATE.flags.bypass_mode) {
+    editState(s => {
+        const currentMode = s.mode || Mode.NO;
+        if (currentMode !== Mode.PLAN && !s.metadata?.plan_prev_mode) {
+            s.metadata = s.metadata || {};
+            s.metadata.plan_prev_mode = currentMode;
+        }
+
+        if ((!s.metadata?.plan_stashed_count || s.metadata.plan_stashed_count === 0) && s.todos.active && s.todos.active.length > 0) {
+            let stashed = 0;
+            if (!s.todos.stashed || s.todos.stashed.length === 0) {
+                stashed = s.todos.stashActive(false);
+            }
+            if (stashed > 0) {
+                s.metadata = s.metadata || {};
+                s.metadata.plan_stashed_count = stashed;
+            }
+        }
+
+        s.mode = Mode.PLAN;
+    });
+
+    console.error("[Plan Mode] Entered plan mode. Only planning operations are allowed until you exit plan mode.");
+    process.exit(0);
+}
+
+// Plan mode exit handling
+if (toolName === CCTools.EXITPLANMODE && !STATE.flags.bypass_mode) {
+    editState(s => {
+        const metadata = s.metadata || {};
+        const prevMode = metadata.plan_prev_mode || Mode.NO;
+        const stashedCount = metadata.plan_stashed_count || 0;
+
+        if (stashedCount) {
+            s.todos.restoreStashed();
+        }
+
+        delete metadata.plan_prev_mode;
+        delete metadata.plan_stashed_count;
+        s.metadata = metadata;
+
+        let targetMode = Object.values(Mode).includes(prevMode) ? prevMode : Mode.NO;
+        if (targetMode === Mode.GO) {
+            targetMode = Mode.NO;
+        }
+
+        s.mode = targetMode;
+    });
+
+    console.error("[Plan Mode] Exited plan mode. You are back in discussion mode.");
+    process.exit(0);
+}
+
 //!> Bash command handling
 // For Bash commands, check if it's a read-only operation
-if (toolName === "Bash" && STATE.mode === Mode.NO && !STATE.flags.bypass_mode) {
+if (toolName === "Bash" && [Mode.NO, Mode.PLAN].includes(STATE.mode) && !STATE.flags.bypass_mode) {
     // Special case: Allow sessions.api commands in discussion mode
     if (command && (command.includes('sessions ') || command.includes('python -m cc_sessions.scripts.api'))) {
         // API commands are allowed in discussion mode for state inspection and safe config operations
@@ -376,8 +434,8 @@ if (filePath && toolName === "Bash" &&
 
 // --- All commands beyond here contain write patterns (read patterns exit early) ---
 
-//!> Discussion mode guard (block write tools)
-if (STATE.mode === Mode.NO && !STATE.flags.bypass_mode) {
+//!> Discussion/plan mode guard (block write tools)
+if ([Mode.NO, Mode.PLAN].includes(STATE.mode) && !STATE.flags.bypass_mode) {
     if (CONFIG.blocked_actions.isToolBlocked(toolName)) {
         console.error(`[DAIC: Tool Blocked] You're in discussion mode. The ${toolName} tool is not allowed. You need to seek alignment first.`);
         process.exit(2);  // Block with feedback

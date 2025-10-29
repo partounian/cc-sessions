@@ -12,7 +12,15 @@ from pathlib import Path
 ##-##
 
 ## ===== LOCAL ===== ##
-from shared_state import edit_state, load_state, Mode, PROJECT_ROOT, load_config, find_git_repo
+from shared_state import (
+    edit_state,
+    load_state,
+    Mode,
+    PROJECT_ROOT,
+    load_config,
+    find_git_repo,
+    CCTools,
+)
 ##-##
 
 #-#
@@ -232,8 +240,11 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
     Args:
         command (str): The bash command to evaluate.
         extrasafe (bool): If True, unrecognized commands are treated as write-like."""
+    extrasafe = CONFIG.blocked_actions.extrasafe if CONFIG.blocked_actions.extrasafe is not None else True
+
     s = (command or '').strip()
-    if not s: return True
+    if not s:
+        return True
 
     if REDIR.search(s):
         return False
@@ -241,8 +252,10 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
     for segment in re.split(r'(?<!\|)\|(?!\|)|&&|\|\|', s):  # Split on |, && and ||
         segment = segment.strip()
         if not segment: continue
-        try: parts = shlex.split(segment)
-        except ValueError: return not CONFIG.blocked_actions.extrasafe
+        try:
+            parts = shlex.split(segment)
+        except ValueError:
+            return not extrasafe
         if not parts: continue
 
         first = parts[0].lower()
@@ -277,7 +290,7 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
         if first in CONFIG.blocked_actions.bash_read_patterns: continue  # Allow custom readonly commands
 
         # If extrasafe is on and command not in readonly list, block it
-        if first not in READONLY_FIRST and CONFIG.blocked_actions.extrasafe: return False
+        if first not in READONLY_FIRST and extrasafe: return False
 
     return True
 ##-##
@@ -290,9 +303,54 @@ def is_bash_read_only(command: str, extrasafe: bool = CONFIG.blocked_actions.ext
 if is_ci_environment():
     sys.exit(0)
 
+# Plan mode entry
+if tool_name == CCTools.PLAN.value and not getattr(STATE.flags, "bypass_mode", False):
+    with edit_state() as s:
+        try:
+            current_mode = s.mode if isinstance(s.mode, Mode) else Mode(s.mode)
+        except ValueError:
+            current_mode = Mode.NO
+
+        if current_mode is not Mode.PLAN and 'plan_prev_mode' not in s.metadata:
+            s.metadata['plan_prev_mode'] = current_mode.value
+
+        if s.todos.active and not s.metadata.get('plan_stashed_count'):
+            stashed = 0
+            if not s.todos.stashed:
+                stashed = s.todos.stash_active(force=False)
+            if stashed:
+                s.metadata['plan_stashed_count'] = stashed
+
+        s.mode = Mode.PLAN
+
+    print("[Plan Mode] Entered plan mode. Only planning operations are allowed until you exit plan mode.", file=sys.stderr)
+    sys.exit(0)
+
+# Plan mode exit
+if tool_name == CCTools.EXITPLANMODE.value and not getattr(STATE.flags, "bypass_mode", False):
+    with edit_state() as s:
+        prev_mode_value = s.metadata.pop('plan_prev_mode', Mode.NO.value)
+        stashed_count = s.metadata.pop('plan_stashed_count', 0)
+
+        if stashed_count:
+            s.todos.restore_stashed()
+
+        try:
+            target_mode = Mode(prev_mode_value)
+        except ValueError:
+            target_mode = Mode.NO
+
+        if target_mode is Mode.GO:
+            target_mode = Mode.NO
+
+        s.mode = target_mode
+
+    print("[Plan Mode] Exited plan mode. You are back in discussion mode.", file=sys.stderr)
+    sys.exit(0)
+
 #!> Bash command handling
 # For Bash commands, check if it's a read-only operation
-if tool_name == "Bash" and STATE.mode is Mode.NO and not STATE.flags.bypass_mode:
+if tool_name == "Bash" and STATE.mode in (Mode.NO, Mode.PLAN) and not STATE.flags.bypass_mode:
     # Special case: Allow sessions.api commands in discussion mode
     if command and ('sessions ' in command or 'python -m cc_sessions.scripts.api' in command):
         # API commands are allowed in discussion mode for state inspection and safe config operations
@@ -334,8 +392,8 @@ if file_path and all([
 
 # --- All commands beyond here contain write patterns (read patterns exit early) ---
 
-#!> Discussion mode guard (block write tools)
-if STATE.mode is Mode.NO and not STATE.flags.bypass_mode:
+#!> Discussion/plan mode guard (block write tools)
+if STATE.mode in (Mode.NO, Mode.PLAN) and not STATE.flags.bypass_mode:
     if CONFIG.blocked_actions.is_tool_blocked(tool_name):
         print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
         _append_event({

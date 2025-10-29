@@ -198,9 +198,13 @@ function completeKickstart(jsonOutput = false) {
         fs.unlinkSync(taskFile);
     }
 
-    // 4. Clear kickstart metadata
+    // 4. Mark kickstart complete (don't delete metadata yet - manual cleanup)
     editState(s => {
-        delete s.metadata.kickstart;
+        if (s.metadata.kickstart) {
+            s.metadata.kickstart.onboarding_complete = true;
+            s.metadata.kickstart.completed_at = new Date().toISOString();
+            // Keep metadata for hook detection during manual cleanup window
+        }
         return s;
     });
 
