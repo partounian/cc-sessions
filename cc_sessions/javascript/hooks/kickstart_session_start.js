@@ -11,10 +11,12 @@ const path = require('path');
 ///-///
 
 /// ===== LOCAL ===== ///
-// Import from shared_state (same pattern as normal hooks)
-const PROJECT_ROOT = path.resolve(__dirname, '../../../../..');
-const sharedStatePath = path.join(PROJECT_ROOT, 'sessions', 'hooks', 'shared_state.js');
-const { loadState } = require(sharedStatePath);
+// Import from shared_state (same pattern as other hooks)
+const {
+    loadState,
+    PROJECT_ROOT,
+    editState
+} = require('./shared_state.js');
 ///-///
 
 //-//
@@ -153,7 +155,6 @@ let protocolContent;
 let currentIndex = kickstartMeta.current_index ?? 0;
 
 if (!('sequence' in kickstartMeta)) {
-    const { editState } = require(sharedStatePath);
     editState((s) => {
         s.metadata.kickstart.sequence = sequence;
         s.metadata.kickstart.current_index = 0;
@@ -180,7 +181,6 @@ if (currentIndex > 0 && lastShown) {
 
     // If shown within last hour, skip instructions but update last_active
     if (hoursSinceShown < 1) {
-        const { editState } = require(sharedStatePath);
         editState((s) => {
             s.metadata.kickstart.last_active = new Date().toISOString();
             return s;
@@ -191,7 +191,6 @@ if (currentIndex > 0 && lastShown) {
 
 // If we reach here, we should show instructions
 // Update last_shown timestamp when displaying instructions
-const { editState } = require(sharedStatePath);
 editState((s) => {
     s.metadata.kickstart.last_shown = new Date().toISOString();
     s.metadata.kickstart.last_active = new Date().toISOString();
