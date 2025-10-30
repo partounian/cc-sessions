@@ -97,16 +97,6 @@ if (toolName === "Task" && STATE.flags.subagent) {
     editState(s => {
         s.flags.subagent = false;
     });
-    // Clean up agent transcript directory
-    const subagentType = toolInput.subagent_type || "shared";
-    const agentDir = path.join(PROJECT_ROOT, 'sessions', 'transcripts', subagentType);
-    if (fs.existsSync(agentDir)) {
-        try {
-            fs.rmSync(agentDir, { recursive: true, force: true });
-        } catch (error) {
-            // Ignore errors
-        }
-    }
     process.exit(0);
 }
 //!<

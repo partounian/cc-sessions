@@ -372,7 +372,6 @@ function configureGitignore() {
     '',
     '# cc-sessions runtime files',
     'sessions/sessions-state.json',
-    'sessions/transcripts/',
     ''
   ];
 

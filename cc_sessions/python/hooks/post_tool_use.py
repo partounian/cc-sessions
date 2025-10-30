@@ -86,11 +86,6 @@ if tool_name == "Task" and STATE.flags.subagent:
     with edit_state() as s:
         s.flags.subagent = False
         STATE = s
-    # Clean up agent transcript directory
-    subagent_type = tool_input.get("subagent_type", "shared")
-    agent_dir = PROJECT_ROOT / "sessions" / "transcripts" / subagent_type
-    if agent_dir.exists():
-        shutil.rmtree(agent_dir)
     sys.exit(0)
 #!<
 

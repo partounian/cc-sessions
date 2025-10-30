@@ -588,6 +588,7 @@ class APIPerms:
 #!> State object
 @dataclass
 class SessionsState:
+    schema_version: str = "0.4.0"
     version: str = "unknown"
     current_task: TaskState = field(default_factory=TaskState)
     active_protocol: Optional[SessionsProtocol] = None

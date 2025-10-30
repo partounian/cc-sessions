@@ -363,18 +363,7 @@ async function main() {
     });
     //!<
 
-    //!> 2. Nuke transcripts dir
-    const transcriptsDir = path.join(sessionsDir, 'transcripts');
-    if (fs.existsSync(transcriptsDir)) {
-        try {
-            fs.rmSync(transcriptsDir, { recursive: true, force: true });
-        } catch (error) {
-            // Ignore errors
-        }
-    }
-    //!<
-
-    //!> 3. Load current task or list available tasks
+    //!> 2. Load current task or list available tasks
     // Check for active task
     const taskFile = STATE.current_task?.filePath;
     if (taskFile && fs.existsSync(taskFile)) {

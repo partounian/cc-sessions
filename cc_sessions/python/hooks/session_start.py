@@ -48,6 +48,69 @@ def is_ci_environment():
 
 # ===== FUNCTIONS ===== #
 
+def detect_repository_info() -> Dict[str, Dict[str, any]]:
+    """Detect git repositories and their branches in the workspace.
+    
+    Returns:
+        Dict mapping repo names to their branch information
+    """
+    repos = {}
+    
+    # Check main project
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--show-toplevel'],
+            capture_output=True, text=True, cwd=PROJECT_ROOT, check=False, timeout=2
+        )
+        if result.returncode == 0:
+            repo_root = result.stdout.strip()
+            repos['main'] = get_repo_details(repo_root)
+    except:
+        pass
+    
+    # Check for sibling repos or submodules
+    try:
+        for item in PROJECT_ROOT.iterdir():
+            if item.is_dir() and (item / '.git').exists() and item != PROJECT_ROOT:
+                repos[item.name] = get_repo_details(str(item))
+    except:
+        pass
+    
+    return repos
+
+def get_repo_details(repo_path: str) -> Dict[str, any]:
+    """Get branch and status info for a repository.
+    
+    Args:
+        repo_path: Path to the git repository
+        
+    Returns:
+        Dict with current_branch, branches, and path
+    """
+    try:
+        # Current branch
+        result = subprocess.run(
+            ['git', 'branch', '--show-current'],
+            capture_output=True, text=True, cwd=repo_path, check=False, timeout=2
+        )
+        current_branch = result.stdout.strip() if result.returncode == 0 else 'unknown'
+        
+        # All branches (local only, to keep it simple)
+        result = subprocess.run(
+            ['git', 'branch'],
+            capture_output=True, text=True, cwd=repo_path, check=False, timeout=2
+        )
+        branches = [b.strip().replace('* ', '') for b in result.stdout.split('\n') if b.strip()]
+        
+        return {
+            'current_branch': current_branch,
+            'branches': list(set(branches)),  # Deduplicate
+            'path': repo_path
+        }
+    except:
+        return {'current_branch': 'unknown', 'branches': [], 'path': repo_path}
+
+
 def parse_index_file(index_path) -> Optional[Tuple[Dict, List[str]]]:
     """Parse an index file and extract metadata and task lines."""
     if not index_path.exists():
@@ -266,12 +329,7 @@ if restored:
     context += f"""Restored {restored} stashed todos from previous session:\n\n{STATE.todos.active}\n\nTo clear, use `cd .claude/hooks && python -c \"from shared_state import edit_state; with edit_state() as s: s.todos.clear_stashed()\"`\n\n"""
 #!<
 
-#!> 2. Nuke transcripts dir
-transcripts_dir = sessions_dir / 'transcripts'
-if transcripts_dir.exists(): shutil.rmtree(transcripts_dir, ignore_errors=True)
-#!<
-
-#!> 3. Load current task or list available tasks
+#!> 2. Load current task or list available tasks
 # Check for active task
 if (task_file := STATE.current_task.file_path) and task_file.exists():
     # Check if task status is pending and update to in-progress
@@ -444,6 +502,16 @@ if update_flag and latest_version and current_version:
 #!<
 
 #-#
+
+# Add multi-repository branch information
+repo_info = detect_repository_info()
+if len(repo_info) > 1:
+    context += "\n### Multi-Repository Workspace\n"
+    for repo_name, details in repo_info.items():
+        branch_count = len(details.get('branches', []))
+        current = details.get('current_branch', 'unknown')
+        context += f"**{repo_name}**: `{current}` ({branch_count} branches available)\n"
+    context += "\n"
 
 # Skip session start hook in CI environments
 if is_ci_environment():

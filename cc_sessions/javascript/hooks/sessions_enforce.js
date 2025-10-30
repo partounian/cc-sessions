@@ -96,6 +96,8 @@ const READONLY_FIRST = new Set([
     'jq', 'yq', 'xmlstarlet', 'xmllint', 'xsltproc',
     'bat', 'fd', 'fzf', 'tree', 'ncdu', 'exa', 'lsd',
     'tldr', 'cheat',
+    // Code search and analysis tools
+    'ast-grep', 'sg', 'ast_grep',  // Syntax-aware code search
     // Note: awk/sed are here but need special argument checking
     'awk', 'sed', 'gawk', 'mawk', 'gsed'
 ]);
@@ -180,6 +182,67 @@ Enforces DAIC (Discussion, Alignment, Implementation, Check) workflow:
 // ===== FUNCTIONS ===== //
 
 /// ===== HELPERS ===== ///
+function blockWithPermissionReason(toolName, reason, remediation, mode) {
+    /**
+     * Block tool with structured feedback for Claude Code UI.
+     * 
+     * @param {string} toolName - Name of the blocked tool
+     * @param {string} reason - Why the tool was blocked
+     * @param {string} remediation - How to proceed (actionable guidance)
+     * @param {string} mode - Current mode (plan, discussion, implementation)
+     */
+    // Print to stderr for backwards compatibility
+    console.error(`[DAIC: Tool Blocked] ${reason}`);
+    console.error(remediation);
+    
+    // Structured output for Claude Code UI
+    const output = {
+        hookEventName: "PreToolUse",
+        hookSpecificOutput: {
+            permissionDecisionReason: reason,
+            suggestedAction: remediation,
+            currentMode: mode,
+            blockedTool: toolName
+        }
+    };
+    console.log(JSON.stringify(output));
+    
+    process.exit(2);
+}
+
+function isWorkArtifactPath(filePath) {
+    /**
+     * Check if file path is a work artifact (plans, logs, docs) allowed in Plan/Discussion modes.
+     * 
+     * @param {string|null} filePath - Path to check
+     * @returns {boolean} True if path is a work artifact that can be created/edited in Plan/Discussion modes
+     */
+    if (!filePath) {
+        return false;
+    }
+    
+    // Allowed directories for work artifacts
+    const allowedPrefixes = [
+        'sessions/',
+        '.claude/',
+        'docs/',
+        'plans/',
+        'notes/',
+        'logs/',
+    ];
+    
+    // Check if path starts with any allowed prefix
+    try {
+        const relPath = path.isAbsolute(filePath) 
+            ? path.relative(PROJECT_ROOT, filePath)
+            : filePath;
+        return allowedPrefixes.some(prefix => relPath.startsWith(prefix));
+    } catch (error) {
+        // If we can't determine relative path, check the string directly
+        return allowedPrefixes.some(prefix => filePath.includes(prefix));
+    }
+}
+
 function checkCommandArguments(parts) {
     // Check if command arguments indicate write operations
     if (!parts || parts.length === 0) return true;
@@ -407,12 +470,14 @@ if (toolName === "Bash" && [Mode.NO, Mode.PLAN].includes(STATE.mode) && !STATE.f
     }
 
     if (!isBashReadOnly(command)) {
-        console.error("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n" +
-                      "Note: Both Claude and the user can configure allowed commands:\n" +
-                      "  - View allowed: sessions config read list\n" +
-                      "  - Add command: sessions config read add <command>\n" +
-                      "  - Remove command: sessions config read remove <command>");
-        process.exit(2);  // Block with feedback
+        const modeName = STATE.mode === Mode.PLAN ? "Plan" : "Discussion";
+        const triggerPhrases = CONFIG.trigger_phrases.implementation_mode.slice(0, 3).join(', ');
+        blockWithPermissionReason(
+            "Bash",
+            `Write-like bash command blocked in ${modeName} mode. Only the user can activate implementation mode.`,
+            `Explain what you want to do and seek alignment first. To proceed, user should say: ${triggerPhrases}\n\nNote: Configure allowed commands with:\n  - sessions config read list\n  - sessions config read add <command>`,
+            STATE.mode
+        );
     } else {
         process.exit(0);
     }
@@ -436,9 +501,23 @@ if (filePath && toolName === "Bash" &&
 
 //!> Discussion/plan mode guard (block write tools)
 if ([Mode.NO, Mode.PLAN].includes(STATE.mode) && !STATE.flags.bypass_mode) {
+    // Allow work artifact writes (plans, logs, docs) in Plan/Discussion modes
+    if (["Write", "Edit", "MultiEdit"].includes(toolName) && isWorkArtifactPath(filePath)) {
+        const modeName = STATE.mode === Mode.PLAN ? "Plan" : "Discussion";
+        console.error(`[${modeName} Mode] Allowing ${toolName} for work artifact: ${filePath}`);
+        process.exit(0);  // Allow work artifact writes
+    }
+    
+    // Block code modifications
     if (CONFIG.blocked_actions.isToolBlocked(toolName)) {
-        console.error(`[DAIC: Tool Blocked] You're in discussion mode. The ${toolName} tool is not allowed. You need to seek alignment first.`);
-        process.exit(2);  // Block with feedback
+        const modeName = STATE.mode === Mode.PLAN ? "Plan" : "Discussion";
+        const triggerPhrases = CONFIG.trigger_phrases.implementation_mode.slice(0, 3).join(', ');
+        blockWithPermissionReason(
+            toolName,
+            `You're in ${modeName} mode. The ${toolName} tool is blocked for code changes.`,
+            `Work artifacts (plans, logs, docs) can be created in sessions/, .claude/, docs/, plans/ directories.\n\nFor code changes, seek alignment and get approval by saying: ${triggerPhrases}`,
+            STATE.mode
+        );
     } else {
         process.exit(0);  // Allow read-only tools
     }

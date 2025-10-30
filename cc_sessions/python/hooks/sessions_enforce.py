@@ -81,6 +81,8 @@ READONLY_FIRST = {
     'jq', 'yq', 'xmlstarlet', 'xmllint', 'xsltproc',
     'bat', 'fd', 'fzf', 'tree', 'ncdu', 'exa', 'lsd',
     'tldr', 'cheat',
+    # Code search and analysis tools
+    'ast-grep', 'sg', 'ast_grep',  # Syntax-aware code search
     # Note: awk/sed are here but need special argument checking
     'awk', 'sed', 'gawk', 'mawk', 'gsed',
 }
@@ -177,6 +179,73 @@ Enforces DAIC (Discussion, Alignment, Implementation, Check) workflow:
 # ===== FUNCTIONS ===== #
 
 ## ===== HELPERS ===== ##
+def block_with_permission_reason(tool_name: str, reason: str, remediation: str, mode: str):
+    """Block tool with structured feedback for Claude Code UI.
+    
+    Args:
+        tool_name: Name of the blocked tool
+        reason: Why the tool was blocked
+        remediation: How to proceed (actionable guidance)
+        mode: Current mode (Plan, Discussion, Implementation)
+    """
+    # Print to stderr for backwards compatibility
+    print(f"[DAIC: Tool Blocked] {reason}", file=sys.stderr)
+    print(f"{remediation}", file=sys.stderr)
+    
+    # Structured output for Claude Code UI
+    output = {
+        "hookEventName": "PreToolUse",
+        "hookSpecificOutput": {
+            "permissionDecisionReason": reason,
+            "suggestedAction": remediation,
+            "currentMode": mode,
+            "blockedTool": tool_name
+        }
+    }
+    print(json.dumps(output), file=sys.stdout)
+    
+    _append_event({
+        "type": "tool_blocked",
+        "reason": "permission_denied",
+        "tool": tool_name,
+        "mode": mode,
+    })
+    sys.exit(2)
+
+def is_work_artifact_path(file_path: Optional[Path]) -> bool:
+    """Check if file path is a work artifact (plans, logs, docs) allowed in Plan/Discussion modes.
+    
+    Args:
+        file_path: Path to check
+        
+    Returns:
+        True if path is a work artifact that can be created/edited in Plan/Discussion modes
+    """
+    if not file_path:
+        return False
+    
+    # Convert to string for easier checking
+    path_str = str(file_path)
+    
+    # Allowed directories for work artifacts
+    allowed_prefixes = [
+        'sessions/',
+        '.claude/',
+        'docs/',
+        'plans/',
+        'notes/',
+        'logs/',
+    ]
+    
+    # Check if path starts with any allowed prefix (relative to project root)
+    try:
+        rel_path = file_path.relative_to(PROJECT_ROOT) if file_path.is_absolute() else file_path
+        rel_path_str = str(rel_path)
+        return any(rel_path_str.startswith(prefix) for prefix in allowed_prefixes)
+    except (ValueError, AttributeError):
+        # If we can't determine relative path, check the string directly
+        return any(prefix in path_str for prefix in allowed_prefixes)
+
 def check_command_arguments(parts):
     """Check if command arguments indicate write operations"""
     if not parts: return True
@@ -357,18 +426,14 @@ if tool_name == "Bash" and STATE.mode in (Mode.NO, Mode.PLAN) and not STATE.flag
         sys.exit(0)
 
     if not is_bash_read_only(command):
-        print("[DAIC] Blocked write-like Bash command in Discussion mode. Only the user can activate implementation mode. Explain what you want to do and seek alignment and approval first.\n"
-              "Note: Both Claude and the user can configure allowed commands:\n"
-              "  - View allowed: sessions config read list\n"
-              "  - Add command: sessions config read add <command>\n"
-              "  - Remove command: sessions config read remove <command>", file=sys.stderr)
-        _append_event({
-            "type": "tool_blocked",
-            "reason": "bash_write_in_discussion",
-            "tool": "Bash",
-            "command": command,
-        })
-        sys.exit(2)  # Block with feedback
+        mode_name = "Plan" if STATE.mode == Mode.PLAN else "Discussion"
+        trigger_phrases = ', '.join(CONFIG.trigger_phrases.implementation_mode[:3])
+        block_with_permission_reason(
+            tool_name="Bash",
+            reason=f"Write-like bash command blocked in {mode_name} mode. Only the user can activate implementation mode.",
+            remediation=f"Explain what you want to do and seek alignment first. To proceed, user should say: {trigger_phrases}\n\nNote: Configure allowed commands with:\n  - sessions config read list\n  - sessions config read add <command>",
+            mode=STATE.mode.value
+        )
     else:
         _append_event({
             "type": "tool_allowed",
@@ -394,14 +459,27 @@ if file_path and all([
 
 #!> Discussion/plan mode guard (block write tools)
 if STATE.mode in (Mode.NO, Mode.PLAN) and not STATE.flags.bypass_mode:
-    if CONFIG.blocked_actions.is_tool_blocked(tool_name):
-        print(f"[DAIC: Tool Blocked] You're in discussion mode. The {tool_name} tool is not allowed. You need to seek alignment first.", file=sys.stderr)
+    # Allow work artifact writes (plans, logs, docs) in Plan/Discussion modes
+    if tool_name in ["Write", "Edit", "MultiEdit"] and is_work_artifact_path(file_path):
+        print(f"[{STATE.mode.value.title()} Mode] Allowing {tool_name} for work artifact: {file_path}", file=sys.stderr)
         _append_event({
-            "type": "tool_blocked",
-            "reason": "blocked_tool_in_discussion",
+            "type": "tool_allowed",
+            "reason": "work_artifact_in_planning",
             "tool": tool_name,
+            "file_path": str(file_path),
         })
-        sys.exit(2)  # Block with feedback
+        sys.exit(0)  # Allow work artifact writes
+    
+    # Block code modifications
+    if CONFIG.blocked_actions.is_tool_blocked(tool_name):
+        mode_name = "Plan" if STATE.mode == Mode.PLAN else "Discussion"
+        trigger_phrases = ', '.join(CONFIG.trigger_phrases.implementation_mode[:3])
+        block_with_permission_reason(
+            tool_name=tool_name,
+            reason=f"You're in {mode_name} mode. The {tool_name} tool is blocked for code changes.",
+            remediation=f"Work artifacts (plans, logs, docs) can be created in sessions/, .claude/, docs/, plans/ directories.\n\nFor code changes, seek alignment and get approval by saying: {trigger_phrases}",
+            mode=STATE.mode.value
+        )
     else: sys.exit(0)  # Allow read-only tools
 #!<
 

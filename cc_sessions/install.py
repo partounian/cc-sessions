@@ -366,7 +366,6 @@ def configure_gitignore(project_root):
         '',
         '# cc-sessions runtime files',
         'sessions/sessions-state.json',
-        'sessions/transcripts/',
         ''
     ]
 
