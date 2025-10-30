@@ -276,12 +276,16 @@ def check_command_arguments(parts):
     if cmd == 'find':
         if '-delete' in args:
             return False
+        # Check for dangerous -exec/-execdir commands
         for i, arg in enumerate(args):
-            if arg in ['-exec', '-execdir']:
-                if i + 1 < len(args):
-                    exec_cmd = args[i + 1].lower()
-                    if exec_cmd in WRITE_FIRST or exec_cmd in ['rm', 'mv', 'cp', 'shred']:
-                        return False
+            if arg not in ['-exec', '-execdir']:
+                continue
+            if i + 1 >= len(args):
+                continue
+            exec_cmd = args[i + 1].lower()
+            dangerous_cmds = WRITE_FIRST | {'rm', 'mv', 'cp', 'shred'}
+            if exec_cmd in dangerous_cmds:
+                return False
 
     # Check xargs for dangerous commands
     if cmd == 'xargs':

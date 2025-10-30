@@ -350,8 +350,8 @@ if (task_file := STATE.current_task.file_path) and task_file.exists():
                 task_content = '\n'.join(lines)
                 break
 
-        # Output the full task state
-        context += f"""Current task state:
+    # Output the full task state (always display, regardless of frontmatter)
+    context += f"""Current task state:
 ```json
 {json.dumps(STATE.current_task.task_state, indent=2)}
 ```
