@@ -1,6 +1,6 @@
 ---
 name: service-documentation
-description: Use ONLY during context compaction or task completion protocols or if you and the user have identified that existing documentation has drifted from the code significantly. This agent updates CLAUDE.md files and module documentation to reflect current implementation, adapting to super-repo, mono-repo, or single-repo structures.
+description: Use ONLY during context compaction or task completion protocols or if you and the user have identified that existing documentation has drifted from the code significantly. This agent updates CLAUDE.md files and module documentation to reflect current implementation, adapting to super-repo, mono-repo, or single-repo structures. Supply with task file path.
 tools: Read, Grep, Glob, LS, Bash, Write, Edit, MultiEdit
 model: sonnet
 color: blue
