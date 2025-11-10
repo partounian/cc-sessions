@@ -2,6 +2,22 @@
   "hooks": {
     "UserPromptSubmit": [
       {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/user_messages.js"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/user_messages.js"
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
         "hooks": [
           {
@@ -20,6 +36,42 @@
       }
     ],
     "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/sessions_enforce.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/subagent_hooks.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/sessions_enforce.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/subagent_hooks.js"
+          }
+        ]
+      },
       {
         "matcher": "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
         "hooks": [
@@ -59,6 +111,24 @@
     ],
     "PostToolUse": [
       {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/post_tool_use.js"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/post_tool_use.js"
+          }
+        ]
+      },
+      {
         "matcher": "Write|Edit|MultiEdit|Task|Bash|NotebookEdit",
         "hooks": [
           {
@@ -78,6 +148,24 @@
       }
     ],
     "SessionStart": [
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/session_start.js"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node $CLAUDE_PROJECT_DIR/sessions/hooks/session_start.js"
+          }
+        ]
+      },
       {
         "hooks": [
           {

@@ -1,26 +1,63 @@
 {
-  "developer_name": "the developer",
-  "trigger_phrases": [
-    "make it so",
-    "run that",
-    "go ahead",
-    "yert"
-  ],
-  "blocked_tools": [
-    "Edit",
-    "Write",
-    "MultiEdit",
-    "NotebookEdit"
-  ],
-  "task_detection": {
-    "enabled": true
+  "trigger_phrases": {
+    "implementation_mode": [
+      "yert",
+      "make it so",
+      "run that"
+    ],
+    "discussion_mode": [
+      "stop",
+      "silence"
+    ],
+    "task_creation": [
+      "mek:",
+      "mekdis"
+    ],
+    "task_startup": [
+      "start^",
+      "begin task:"
+    ],
+    "task_completion": [
+      "finito"
+    ],
+    "context_compaction": [
+      "lets compact",
+      "let's compact",
+      "squish"
+    ]
   },
-  "branch_enforcement": {
-    "enabled": true
+  "blocked_actions": {
+    "implementation_only_tools": [
+      "Edit",
+      "Write",
+      "MultiEdit",
+      "NotebookEdit"
+    ],
+    "bash_read_patterns": [],
+    "bash_write_patterns": [],
+    "extrasafe": false
   },
-  "api_mode": false,
-  "workspace": {
-    "include_repositories": [],
-    "exclude_patterns": []
+  "git_preferences": {
+    "add_pattern": "ask",
+    "default_branch": "main",
+    "commit_style": "conventional",
+    "auto_merge": false,
+    "auto_push": false,
+    "has_submodules": false
+  },
+  "environment": {
+    "os": "macos",
+    "shell": "bash",
+    "developer_name": "developer"
+  },
+  "features": {
+    "branch_enforcement": true,
+    "task_detection": true,
+    "auto_ultrathink": true,
+    "auto_update": false,
+    "context_warnings": {
+      "warn_85": true,
+      "warn_90": true
+    }
   }
 }

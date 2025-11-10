@@ -589,6 +589,7 @@ class SessionsState {
         this.todos = new SessionsTodos(data.todos || {});
         this.model = data.model || Model.OPUS;
         this.flags = new SessionsFlags(data.flags || {});
+        this.metadata = data.metadata || {};
     }
 
     static _coerceTodo(x) {
@@ -665,6 +666,7 @@ class SessionsState {
             noob: flagsData.noob !== undefined ? flagsData.noob : true,
             bypass_mode: flagsData.bypass_mode || false
         });
+        state.metadata = data.metadata || {};
 
         return state;
     }
@@ -681,7 +683,8 @@ class SessionsState {
                 stashed: this.todos.toList('stashed')
             },
             model: this.model,
-            flags: { ...this.flags }
+            flags: { ...this.flags },
+            metadata: { ...this.metadata }
         };
     }
 }

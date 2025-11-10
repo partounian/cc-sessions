@@ -1100,39 +1100,7 @@ async function installerDecisionFlow() {
     }]);
 
     if (versionCheck.value === 'Yes') {
-      // Config/agent import workflow
-      const importChoice = await inquirer.prompt([{
-        type: 'list',
-        name: 'value',
-        message: 'Would you like to import your configuration and agents?',
-        choices: ['Yes', 'No']
-      }]);
-
-      if (importChoice.value === 'Yes') {
-        const importSource = await inquirer.prompt([{
-          type: 'list',
-          name: 'value',
-          message: 'Where is your cc-sessions configuration?',
-          choices: ['Local directory', 'Git repository URL', 'Skip import']
-        }]);
-
-        if (importSource.value !== 'Skip import') {
-          const sourcePathAnswer = await inquirer.prompt([{
-            type: 'input',
-            name: 'value',
-            message: color('Path or URL: ', colors.cyan)
-          }]);
-          const sourcePath = sourcePathAnswer.value.trim();
-
-          // [PLACEHOLDER] Import config and agents, then present for interactive modification
-          // TODO: Implement config import with interactive modification feature
-          console.log(color('\n⚠️  Config import not yet implemented. Continuing with interactive configuration...', colors.yellow));
-        } else {
-          console.log(color('\nSkipping import. Continuing with interactive configuration...', colors.cyan));
-        }
-      } else {
-        console.log(color('\nContinuing with interactive configuration...', colors.cyan));
-      }
+      console.log(color('\nDetected existing user. Configuration will be preserved during upgrade.', colors.cyan));
     } else {
       // Treat as first-time user
       console.log(color('\nTreating as first-time user. Continuing with setup...', colors.cyan));

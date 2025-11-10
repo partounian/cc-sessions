@@ -1,3 +1,6 @@
+
+@sessions/CLAUDE.sessions.md
+
 # cc-sessions CLAUDE.md
 
 ## Purpose

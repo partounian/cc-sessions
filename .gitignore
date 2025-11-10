@@ -66,3 +66,6 @@ scripts/
 *.tmp
 .tmp/
 tmp/
+
+# cc-sessions runtime files
+sessions/sessions-state.json
